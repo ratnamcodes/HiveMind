@@ -12,9 +12,21 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from starlette.responses import JSONResponse
 
+from hivemind.limiter import limiter, populate_channel_id
+
+
+def rate_limit_exceeded(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"rate limit exceeded: {exc.detail}"},
+        headers={"Retry-After": "60"},
+    )
 from hivemind.redis_client import close_redis, get_redis
 from orchestrator.graph import app as graph_app
 
@@ -41,10 +53,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="HiveMind", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded)
+app.add_middleware(SlowAPIMiddleware)
+app.middleware("http")(populate_channel_id)
 
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
+@limiter.limit("60/minute")
+async def chat(request: Request, req: ChatRequest) -> ChatResponse:
     trace_id = str(uuid.uuid4())
     result = await graph_app.ainvoke({"input": req.message, "output": ""})
     return ChatResponse(output=result["output"], trace_id=trace_id)
