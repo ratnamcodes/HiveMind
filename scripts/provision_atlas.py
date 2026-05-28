@@ -2,9 +2,16 @@
 
 A Gemini 3.5 agent (Google ADK + MongoDB MCP) provisions HiveMind's Atlas
 infrastructure end-to-end with no human in the loop: project, M0 cluster,
-DB user, network rule, database, collection, and 1024-dim vector index.
+DB user, network rule, database, collection, and a Voyage AI autoEmbed
+vector search index on the `incidents.summary` field.
 
 Idempotent: re-running detects existing resources and skips them.
+
+Prereq (manual, one-time per Atlas org):
+    Add a payment method to your MongoDB Atlas org so Voyage AI auto-embed
+    has standard rate limits. Without it, the index builds fine but the
+    first insert / recall hits a 3 RPM cap and 429s. You won't be charged
+    at hackathon scale — voyage-4 free tokens cover it.
 """
 
 from __future__ import annotations
@@ -51,9 +58,8 @@ DB_NAME = "hivemind"
 COLLECTION_NAME = "incidents"
 DB_USER = "hivemind-app"
 VECTOR_INDEX_NAME = "incidents_vector_idx"
-VECTOR_FIELD = "embedding"
-VECTOR_DIMS = 1024
-SIMILARITY = "cosine"
+EMBED_PATH = "summary"  # the source text field Atlas will auto-embed
+EMBED_MODEL = "voyage-4"  # MongoDB-managed Voyage AI model for auto-embed
 
 APP_NAME = "atlas-provisioner"
 USER_ID = "provisioner"
@@ -175,14 +181,28 @@ RESOURCES TO ENSURE:
      (Atlas creates these implicitly when a document or index is first added.
       If unsure, insert one placeholder document {{"_id": "init"}} into
       {DB_NAME}.{COLLECTION_NAME} to materialize them.)
-  6. Vector search index:
+  6. Vector search index (Voyage AI Automated Embedding — Public Preview):
        name        = "{VECTOR_INDEX_NAME}"
        database    = "{DB_NAME}"
        collection  = "{COLLECTION_NAME}"
-       type        = "vectorSearch"
-       field       = "{VECTOR_FIELD}"
-       dimensions  = {VECTOR_DIMS}
-       similarity  = "{SIMILARITY}"
+       type        = "vectorSearch"   (the high-level Atlas index TYPE)
+       definition  = a vector search index whose `fields` is exactly:
+                       [{{
+                         "type": "autoEmbed",
+                         "modality": "text",
+                         "path": "{EMBED_PATH}",
+                         "model": "{EMBED_MODEL}"
+                       }}]
+
+       IMPORTANT: do NOT add `numDimensions`, `similarity`, or
+       `quantization` — autoEmbed derives those from the model. If the
+       tool refuses without them, call `search-knowledge` for
+       "vector search autoEmbed index definition" before retrying.
+
+       If `atlas-create-search-index` fails with a billing error
+       (HTTP 429 / payment method required), STOP and surface the
+       error in the final JSON. The Atlas org needs a payment method
+       on file before autoEmbed will work.
 
 PROCEDURE:
   - List existing resources first (atlas-list-projects, atlas-list-clusters,
@@ -190,6 +210,10 @@ PROCEDURE:
     anything that already matches.
   - After creating the cluster, poll its status until it reaches "IDLE"
     before creating the vector index.
+  - When checking for an EXISTING vector index, also verify its definition
+    has fields[0].type == "autoEmbed". If a same-named index exists with
+    the OLD vectorSearch field shape (path=embedding, numDimensions=1024),
+    delete it and recreate with the autoEmbed shape above.
   - After everything is in place, fetch the cluster's standardSrv
     connection string via atlas-inspect-cluster (or atlas-list-clusters).
   - If you don't know a tool's exact parameters, call `search-knowledge`
@@ -337,7 +361,7 @@ def _victory(result: dict[str, Any], masked_uri: str) -> None:
     print(f"  {BOLD}Project:{RESET}      {result.get('project_id', '?')}")
     print(f"  {BOLD}Cluster:{RESET}      {result.get('cluster_name', CLUSTER_NAME)}")
     print(f"  {BOLD}Database:{RESET}     {result.get('database', DB_NAME)}.{result.get('collection', COLLECTION_NAME)}")
-    print(f"  {BOLD}Vector idx:{RESET}   {result.get('vector_index', VECTOR_INDEX_NAME)} ({VECTOR_DIMS}-dim, {SIMILARITY})")
+    print(f"  {BOLD}Vector idx:{RESET}   {result.get('vector_index', VECTOR_INDEX_NAME)} (autoEmbed → {EMBED_MODEL} on '{EMBED_PATH}')")
     print(f"  {BOLD}Connection:{RESET}   {masked_uri}")
     created = result.get("created") or []
     skipped = result.get("skipped") or []
@@ -367,6 +391,12 @@ async def _fast_path_result() -> dict[str, Any] | None:
         client.close()
         idx = next((i for i in indexes if i.get("name") == VECTOR_INDEX_NAME), None)
         if not idx or idx.get("status") not in {"READY", "ACTIVE"}:
+            return None
+        # Confirm it's the autoEmbed shape — an old vectorSearch-type index
+        # with the same name would silently break HiveMind, so don't fast-path.
+        defn = idx.get("latestDefinition") or idx.get("definition") or {}
+        fields = defn.get("fields") or []
+        if not fields or fields[0].get("type") != "autoEmbed":
             return None
         return {
             "connection_string": uri,
@@ -400,7 +430,7 @@ def main() -> int:
 
     _banner("HiveMind Atlas Provisioner — Milestone 1")
     print(f"  {DIM}org={org_id}  project={PROJECT_NAME}  cluster={CLUSTER_NAME}  region={PROVIDER}/{REGION}{RESET}")
-    print(f"  {DIM}db={DB_NAME}.{COLLECTION_NAME}  vector=({VECTOR_DIMS}-dim, {SIMILARITY}){RESET}\n")
+    print(f"  {DIM}db={DB_NAME}.{COLLECTION_NAME}  vector=autoEmbed:{EMBED_MODEL} on '{EMBED_PATH}'{RESET}\n")
 
     fast = asyncio.run(_fast_path_result())
     if fast:
