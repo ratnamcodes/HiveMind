@@ -4,15 +4,22 @@ import asyncio
 import json
 import os
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from fastapi import Request
 from slowapi import Limiter
 
 from hivemind.redis_client import get_redis
 
+if TYPE_CHECKING:
+    from google.adk.agents.llm_agent import BeforeToolCallback
+    from google.adk.tools.base_tool import BaseTool
+    from google.adk.tools.tool_context import ToolContext
+
 DEFAULT_AGENT_CONCURRENCY = 5
 SEMAPHORE_POLL_INTERVAL = 0.1
+DEFAULT_TOOL_BUDGET = 4
+_TOOL_BUDGET_KEY = "tool_calls_made"
 
 
 def _channel_key(request: Request) -> str:
@@ -73,3 +80,36 @@ async def acquire(
         yield
     finally:
         await redis.decr(key)
+
+
+def tool_call_budget(max_calls: int = DEFAULT_TOOL_BUDGET) -> "BeforeToolCallback":
+    """Return an ADK ``before_tool_callback`` that caps tool calls per run.
+
+    Where :func:`acquire` bounds *concurrency*, this bounds *depth*: it stops a
+    specialist (e.g. LogDiver) from grinding through dozens of Elastic queries on
+    a single question. ADK runs the callback before every tool call — returning
+    ``None`` lets it proceed, returning a dict short-circuits the call and feeds
+    that dict back as the tool's result. We count calls in the delta-aware
+    session state keyed by ``invocation_id`` so each fresh investigation starts
+    with a full budget, then hand back an error once the budget is spent.
+    """
+
+    def _before_tool(
+        tool: "BaseTool", args: dict[str, Any], tool_context: "ToolContext"
+    ) -> dict[str, Any] | None:
+        key = f"{_TOOL_BUDGET_KEY}:{tool_context.invocation_id}"
+        used = tool_context.state.get(key, 0)
+        if used >= max_calls:
+            return {
+                "error": "tool_call_budget_exhausted",
+                "budget": max_calls,
+                "message": (
+                    f"Tool-call budget of {max_calls} reached. Do not call any "
+                    "more tools — write your final report from the evidence you "
+                    "have already gathered."
+                ),
+            }
+        tool_context.state[key] = used + 1
+        return None
+
+    return _before_tool

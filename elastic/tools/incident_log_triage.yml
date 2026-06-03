@@ -1,0 +1,149 @@
+# =============================================================================
+# Workflow: incident_log_triage
+#
+# One-shot incident triage over HiveMind's service logs. Registered with
+# Elastic Agent Builder as a `workflow` tool so LogDiver can call it directly.
+#
+#   1. hybrid_search      BM25 + dense (semantic_text) recall of the signature
+#   2. anomaly_detection  ES|QL z-score of each service's error rate vs 24h base
+#   3. dedupe_by_signature group errors by a regex-masked signature
+#   4. enrich             LOOKUP JOIN the noisiest services to their last deploy
+#   5. emit_report        workflow.output: hand the four result sets back
+#
+# Inputs (declared in the top-level `inputs:` section, per the kbn-workflows schema):
+#   { error_signature, time_window_minutes=30, services_filter? }
+# Outputs (emitted by the workflow.output step):
+#   { groups, anomalous_services, top_suspect_deploy, notable_lines }
+# =============================================================================
+version: "1"
+name: incident_log_triage
+description: >
+  Triage a spiking error across HiveMind service logs: hybrid-search the
+  signature, score per-service error-rate anomalies, dedupe by normalized
+  signature, and blame the most recent deploy on the noisiest service.
+enabled: true
+
+tags:
+  - hivemind
+  - observability
+  - incident
+
+# Invoked on demand by the Agent Builder tool (LogDiver), so a manual trigger.
+triggers:
+  - type: manual
+
+# Inputs are a TOP-LEVEL section (sibling of triggers/consts/steps), NOT nested
+# under the trigger — the kbn-workflows parser silently drops `inputs` placed
+# under a trigger, leaving definition.inputs null. Agent Builder auto-derives
+# the workflow tool's parameter schema from THIS section, so these names/types/
+# descriptions are exactly what LogDiver sees as the tool's params. Referenced
+# downstream as {{ inputs.<name> }}.
+inputs:
+  - name: error_signature
+    type: string
+    description: The error text or signature to investigate (e.g. "connection refused to checkout-db").
+    required: true
+  - name: time_window_minutes
+    type: number
+    description: How far back to look for the active incident, in minutes.
+    required: false
+    default: 30
+  - name: services_filter
+    type: array
+    description: Optional list of service names to scope the triage to. Empty = all services.
+    required: false
+
+consts:
+  logs_index: "hivemind-logs-*"
+  deploys_index: "hivemind-deploys"
+  baseline_hours: 24
+  bucket_minutes: 30
+
+steps:
+  # ---------------------------------------------------------------------------
+  # 1. hybrid_search — BM25 (message) + dense vector (message_embedding,
+  #    a semantic_text field) recall of the signature within the time window.
+  # ---------------------------------------------------------------------------
+  - name: hybrid_search
+    type: elasticsearch.search
+    with:
+      index: "{{ consts.logs_index }}"
+      size: 25
+      query:
+        bool:
+          minimum_should_match: 1
+          should:
+            - semantic:
+                field: message_embedding
+                query: "{{ inputs.error_signature }}"
+            - match:
+                message: "{{ inputs.error_signature }}"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{ inputs.time_window_minutes }}m"
+
+  # ---------------------------------------------------------------------------
+  # 2. anomaly_detection — bucket ERRORs per service over the last 24h, then
+  #    z-score the current window's error count against the baseline buckets.
+  # ---------------------------------------------------------------------------
+  - name: anomaly_detection
+    type: elasticsearch.esql.query
+    with:
+      query: |
+        FROM {{ consts.logs_index }}
+        | WHERE level == "ERROR" AND @timestamp >= NOW() - {{ consts.baseline_hours }} hours{% if inputs.services_filter and inputs.services_filter != empty %} AND service IN ({% for s in inputs.services_filter %}"{{ s }}"{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
+        | EVAL bucket = DATE_TRUNC({{ consts.bucket_minutes }} minutes, @timestamp)
+        | EVAL window = CASE(@timestamp >= NOW() - {{ inputs.time_window_minutes }} minutes, "current", "baseline")
+        | STATS bucket_errors = COUNT(*) BY service, bucket, window
+        | STATS current_errors = MAX(CASE(window == "current", bucket_errors, 0)), baseline_avg = AVG(CASE(window == "baseline", bucket_errors, NULL)), baseline_std = STD_DEV(CASE(window == "baseline", bucket_errors, NULL)) BY service
+        | EVAL z_score = (current_errors - baseline_avg) / (baseline_std + 0.001)
+        | WHERE current_errors > 0 AND (z_score >= 2.0 OR current_errors >= baseline_avg + 5)
+        | SORT z_score DESC
+        | KEEP service, current_errors, baseline_avg, baseline_std, z_score
+        | LIMIT 25
+
+  # ---------------------------------------------------------------------------
+  # 3. dedupe_by_signature — mask UUIDs/hex ids and numerics out of the message
+  #    so "...after 5000ms" and "...after 30000ms" collapse to one signature.
+  # ---------------------------------------------------------------------------
+  - name: dedupe_by_signature
+    type: elasticsearch.esql.query
+    with:
+      query: |
+        FROM {{ consts.logs_index }}
+        | WHERE level == "ERROR" AND @timestamp >= NOW() - {{ inputs.time_window_minutes }} minutes{% if inputs.services_filter and inputs.services_filter != empty %} AND service IN ({% for s in inputs.services_filter %}"{{ s }}"{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
+        | EVAL signature = REPLACE(message, "[0-9a-fA-F]{8,}", "<id>")
+        | EVAL signature = REPLACE(signature, "[0-9]+", "<n>")
+        | STATS count = COUNT(*), services = VALUES(service), sample_message = MIN(message), first_seen = MIN(@timestamp), last_seen = MAX(@timestamp) BY signature
+        | SORT count DESC
+        | LIMIT 20
+
+  # ---------------------------------------------------------------------------
+  # 4. enrich — rank services by error volume in the window and LOOKUP JOIN each
+  #    to its current deploy. The top row is the prime suspect deploy.
+  # ---------------------------------------------------------------------------
+  - name: enrich
+    type: elasticsearch.esql.query
+    with:
+      query: |
+        FROM {{ consts.logs_index }}
+        | WHERE level == "ERROR" AND @timestamp >= NOW() - {{ inputs.time_window_minutes }} minutes{% if inputs.services_filter and inputs.services_filter != empty %} AND service IN ({% for s in inputs.services_filter %}"{{ s }}"{% unless forloop.last %}, {% endunless %}{% endfor %}){% endif %}
+        | STATS error_count = COUNT(*) BY service
+        | LOOKUP JOIN {{ consts.deploys_index }} ON service
+        | SORT error_count DESC
+        | KEEP service, error_count, version, commit_sha, deployed_at, deployed_by, environment, summary
+        | LIMIT 10
+
+  # ---------------------------------------------------------------------------
+  # 5. emit_report — hand the four result sets back to LogDiver. ES|QL `.output`
+  #    carries {columns, values}; the `json` filter serializes each so the tool
+  #    returns parseable JSON strings.
+  # ---------------------------------------------------------------------------
+  - name: emit_report
+    type: workflow.output
+    with:
+      groups: "{{ steps.dedupe_by_signature.output | json }}"
+      anomalous_services: "{{ steps.anomaly_detection.output | json }}"
+      top_suspect_deploy: "{{ steps.enrich.output | json }}"
+      notable_lines: "{{ steps.hybrid_search.output.hits.hits | json }}"
