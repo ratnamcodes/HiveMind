@@ -51,6 +51,7 @@ from agents.log_diver import LogQuery, LogTriageReport, log_diver
 from agents.reviewer import CriticVerdict, _phoenix_trace_url, reviewer
 from agents.scribe import IncidentSummary, StoredIncident, scribe
 from hivemind.memory import ColdMemory, Incident
+from orchestrator.critic import critique
 
 load_dotenv()
 
@@ -85,21 +86,51 @@ class OrchestratorState(TypedDict, total=False):
 
 
 # --- helpers ---------------------------------------------------------------
-async def _run_agent(agent, payload_json: str) -> str:
-    """Run one ADK agent on a JSON payload; return its final text (its output schema)."""
+async def _run_agent(agent, payload_json: str) -> tuple[str, int]:
+    """Run one ADK agent on a JSON payload; return (final text, number of tool calls made).
+
+    Fresh session per call — HiveMind investigates each incident in isolation (no cross-
+    incident memory). ADK *explicit* context caching only reuses within a persistent
+    session (proven in scripts/measure_caching.py), so it does NOT apply on this path and
+    would only create throwaway caches; this path rides free *implicit* caching instead.
+    See hivemind/caching.py for the explicit layer + when it pays off.
+    """
     session_service = InMemorySessionService()
     runner = Runner(agent=agent, app_name="hivemind", session_service=session_service)
     session = await session_service.create_session(
         app_name="hivemind", user_id="hivemind"
     )
     msg = types.Content(role="user", parts=[types.Part(text=payload_json)])
-    final_text = ""
+    final_text, tool_calls = "", 0
     async for event in runner.run_async(
         user_id=session.user_id, session_id=session.id, new_message=msg
     ):
+        tool_calls += len(event.get_function_calls() or [])
         if event.is_final_response() and event.content and event.content.parts:
             final_text = "".join(p.text or "" for p in event.content.parts)
-    return final_text
+    return final_text, tool_calls
+
+
+async def _run_with_critic(
+    agent, payload_json: str, schema, node_name: str, *, expect_tools: bool = True
+) -> dict:
+    """Run an agent, then apply the per-hop critic (schema-valid + non-empty + grounded).
+    On failure, retry ONCE before proceeding — catching ungrounded/garbage output at the
+    hop instead of letting it ride to the final Reviewer. Returns the validated dict."""
+    text, tool_calls = "", 0
+    for attempt in range(2):
+        text, tool_calls = await _run_agent(agent, payload_json)
+        crit = critique(text, schema, tool_calls, expect_tools=expect_tools)
+        if crit.passed:
+            return schema.model_validate_json(text).model_dump(mode="json")
+        with _tracer.start_as_current_span(f"{node_name}.critic_reject") as s:
+            s.set_attribute("attempt", attempt)
+            s.set_attribute("tool_calls", tool_calls)
+            s.set_attribute("reasons", "; ".join(crit.reasons))
+    # Retries exhausted: proceed with the best-effort output (the final Reviewer is the
+    # backstop); this raises only if it's truly unparseable, which ADK's output_schema
+    # makes rare.
+    return schema.model_validate_json(text).model_dump(mode="json")
 
 
 def _services(state: OrchestratorState) -> list[str]:
@@ -134,8 +165,10 @@ async def detective_node(state: OrchestratorState) -> dict:
         severity=p.get("severity", "sev3"),
     )
     with _tracer.start_as_current_span(DETECTIVE):
-        text = await _run_agent(detective, req.model_dump_json())
-    return {"finding": InvestigationFinding.model_validate_json(text).model_dump(mode="json")}
+        finding = await _run_with_critic(
+            detective, req.model_dump_json(), InvestigationFinding, DETECTIVE
+        )
+    return {"finding": finding}
 
 
 async def log_diver_node(state: OrchestratorState) -> dict:
@@ -146,8 +179,10 @@ async def log_diver_node(state: OrchestratorState) -> dict:
         services=_services(state),
     )
     with _tracer.start_as_current_span(LOG_DIVER):
-        text = await _run_agent(log_diver, req.model_dump_json())
-    return {"log_report": LogTriageReport.model_validate_json(text).model_dump(mode="json")}
+        log_report = await _run_with_critic(
+            log_diver, req.model_dump_json(), LogTriageReport, LOG_DIVER
+        )
+    return {"log_report": log_report}
 
 
 async def code_arch_node(state: OrchestratorState) -> dict:
@@ -164,8 +199,10 @@ async def code_arch_node(state: OrchestratorState) -> dict:
         workflow_public_url=(f.get("workflow_public_url") if f else None),
     )
     with _tracer.start_as_current_span(CODE_ARCH):
-        text = await _run_agent(code_arch, req.model_dump_json())
-    return {"code_finding": CodeFinding.model_validate_json(text).model_dump(mode="json")}
+        code_finding = await _run_with_critic(
+            code_arch, req.model_dump_json(), CodeFinding, CODE_ARCH
+        )
+    return {"code_finding": code_finding}
 
 
 async def customer_liaison_node(state: OrchestratorState) -> dict:
@@ -176,8 +213,10 @@ async def customer_liaison_node(state: OrchestratorState) -> dict:
         incident_id=state["incident_id"],
     )
     with _tracer.start_as_current_span(LIAISON):
-        text = await _run_agent(customer_liaison, req.model_dump_json())
-    return {"customer_report": CustomerImpactReport.model_validate_json(text).model_dump(mode="json")}
+        customer_report = await _run_with_critic(
+            customer_liaison, req.model_dump_json(), CustomerImpactReport, LIAISON
+        )
+    return {"customer_report": customer_report}
 
 
 async def scribe_node(state: OrchestratorState) -> dict:
@@ -198,7 +237,7 @@ async def scribe_node(state: OrchestratorState) -> dict:
         participants=[DETECTIVE, *FANOUT],
     )
     with _tracer.start_as_current_span(SCRIBE):
-        text = await _run_agent(scribe, summary_in.model_dump_json())
+        text, _ = await _run_agent(scribe, summary_in.model_dump_json())
     stored = StoredIncident.model_validate_json(text)
 
     # Scribe has no write tool — the node persists the synthesis to Atlas ColdMemory.
@@ -229,7 +268,7 @@ async def reviewer_node(state: OrchestratorState) -> dict:
         for k in ("finding", "log_report", "code_finding", "customer_report", "stored_incident")
     }
     with _tracer.start_as_current_span(REVIEWER):
-        text = await _run_agent(reviewer, json.dumps(incident_view, default=str))
+        text, _ = await _run_agent(reviewer, json.dumps(incident_view, default=str))
     verdict = CriticVerdict.model_validate_json(text)
     out: dict = {"verdict": verdict.model_dump(mode="json")}
     if verdict.verdict == "revise":
