@@ -12,3 +12,24 @@ slowapi==0.1.9
 motor==3.7.1
 elasticsearch==9.4.1
 google-cloud-bigquery>=3.25
+
+# --- Phoenix observability (T13) -------------------------------------------
+# Traces go to a Phoenix backend (self-hosted via Docker now; Phoenix Cloud for
+# the hosted demo later) through phoenix.otel.register(); the ADK spans come
+# from the OpenInference instrumentor.
+arize-phoenix-otel==0.16.1
+arize-phoenix-client==2.7.0  # Reviewer pulls the production rubric at runtime; seed pushes it
+openinference-instrumentation-google-adk==0.1.15
+# arize-phoenix-otel declares no upper bound on OpenTelemetry, so installing it
+# bare pulls OTEL 1.42+ and breaks google-adk 2.1.0 (which caps opentelemetry-sdk
+# at <=1.41.1) plus logfire/mistralai. Hold the whole stack on the 1.39.1 / 0.60b1
+# line that satisfies every consumer (phoenix-otel itself only needs >=1.x).
+opentelemetry-api==1.39.1
+opentelemetry-sdk==1.39.1
+opentelemetry-proto==1.39.1
+opentelemetry-exporter-otlp==1.39.1
+opentelemetry-exporter-otlp-proto-common==1.39.1
+opentelemetry-exporter-otlp-proto-grpc==1.39.1
+opentelemetry-exporter-otlp-proto-http==1.39.1
+opentelemetry-instrumentation==0.60b1
+opentelemetry-semantic-conventions==0.60b1

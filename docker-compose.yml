@@ -6,14 +6,34 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
 
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports: ["6006:6006", "4317:4317"]
+    # Persist traces + prompts + annotations to a named volume. PHOENIX_WORKING_DIR
+    # moves Phoenix's SQLite store onto the mount so it survives container restarts
+    # (without this, the seeded rubric + the T18 span annotations die with the container).
+    environment:
+      PHOENIX_WORKING_DIR: /mnt/data
+    volumes:
+      - phoenix_data:/mnt/data
+
   api:
     build: .
     ports: ["8000:8000"]
     env_file: .env
     environment:
       REDIS_URL: redis://redis:6379
+      # In-container, reach Phoenix over the compose network (not localhost — that's
+      # only right for host-run scripts/tests). Same override pattern as REDIS_URL.
+      PHOENIX_HOST: http://phoenix:6006
+      PHOENIX_COLLECTOR_ENDPOINT: http://phoenix:6006
     volumes:
       - ${HOME}/.config/gcloud:/root/.config/gcloud:ro
     depends_on:
       redis:
         condition: service_healthy
+      phoenix:
+        condition: service_started
+
+volumes:
+  phoenix_data:

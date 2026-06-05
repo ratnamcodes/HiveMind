@@ -17,6 +17,10 @@ from agents.hello import run_once
 class OrchestratorState(TypedDict):
     input: str
     output: str
+    # Reviewer's run trace in Phoenix, produced by agents.reviewer.review(). CodeArch
+    # stamps it into the GitLab MR + closing note (T11). Populated once the Reviewer
+    # is wired in as a graph node; absent on the current hello-only path.
+    arize_trace_url: str
 
 
 async def hello_node(state: OrchestratorState) -> dict[str, str]:
