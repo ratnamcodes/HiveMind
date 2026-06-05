@@ -1,6 +1,9 @@
 services:
   redis:
-    image: redis:7-alpine
+    # redis-stack-server = Redis + RediSearch + RedisJSON. langgraph-checkpoint-redis
+    # (the orchestrator's checkpointer, T14) needs RediSearch; the hot-memory ops
+    # (RPUSH/LTRIM/EXPIRE) are a subset, so this is a safe superset swap.
+    image: redis/redis-stack-server:latest
     ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]

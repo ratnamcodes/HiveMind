@@ -7,7 +7,6 @@ reachable at startup and crashes the app if it isn't.
 
 from __future__ import annotations
 
-import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -28,7 +27,7 @@ def rate_limit_exceeded(request: Request, exc: RateLimitExceeded) -> JSONRespons
         headers={"Retry-After": "60"},
     )
 from hivemind.redis_client import close_redis, get_redis
-from orchestrator.graph import app as graph_app
+from orchestrator.graph import runner as orchestrator_runner
 
 load_dotenv()
 
@@ -39,7 +38,9 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    output: str
+    incident_id: str
+    status: str
+    output: dict
     trace_id: str
 
 
@@ -62,9 +63,18 @@ app.middleware("http")(populate_channel_id)
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("60/minute")
 async def chat(request: Request, req: ChatRequest) -> ChatResponse:
-    trace_id = str(uuid.uuid4())
-    result = await graph_app.ainvoke({"input": req.message, "output": ""})
-    return ChatResponse(output=result["output"], trace_id=trace_id)
+    # Dispatch the message as an incident through the orchestrator (T14). NOTE: a
+    # /chat call is now a FULL incident run — it drives all six specialists against
+    # live partners and can open a real MR; it is not a quick reply.
+    result = await orchestrator_runner.run(
+        {"alert": req.message, "channel_id": req.channel_id}
+    )
+    return ChatResponse(
+        incident_id=result.incident_id,
+        status=result.status,
+        output=result.output,
+        trace_id=result.trace_id,
+    )
 
 
 @app.get("/healthz")

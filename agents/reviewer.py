@@ -132,6 +132,11 @@ class CriticVerdict(BaseModel):
     verdict: Literal["approve", "revise", "escalate"]
     rubric_findings: list[RubricFinding] = Field(default_factory=list)
     rewrite_hint: str | None = None
+    # On a `revise` verdict, which specialist should redo its work (orchestrator
+    # routing — `rewrite_hint` is the human-readable "why", this is the machine target).
+    revise_target: (
+        Literal["detective", "log_diver", "code_arch", "customer_liaison"] | None
+    ) = None
 
 
 # ---- Phoenix MCP toolset (the meta-loop "seeds") --------------------------
