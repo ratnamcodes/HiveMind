@@ -1,0 +1,13 @@
+customer_id,plan,monthly_revenue,services_used
+CUST-001,Enterprise,4200,"[""checkout"",""payment-service"",""search""]"
+CUST-002,Pro,299,"[""checkout"",""payment-service""]"
+CUST-003,Free,0,"[""search""]"
+CUST-004,Enterprise,5800,"[""checkout"",""payment-service"",""notifications"",""search""]"
+CUST-005,Pro,199,"[""search"",""notifications""]"
+CUST-006,Pro,349,"[""checkout"",""payment-service""]"
+CUST-007,Free,0,"[""checkout""]"
+CUST-008,Enterprise,3100,"[""payment-service"",""search""]"
+CUST-009,Pro,249,"[""checkout"",""notifications""]"
+CUST-010,Free,0,"[""search""]"
+CUST-011,Enterprise,7500,"[""checkout"",""payment-service"",""search"",""notifications""]"
+CUST-012,Pro,149,"[""payment-service""]"
