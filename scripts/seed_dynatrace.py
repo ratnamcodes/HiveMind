@@ -77,20 +77,25 @@ def build_logs() -> list[dict]:
         add(m, "INFO",
             f"checkout request completed ok — p99 latency {p99}ms (baseline healthy)")
 
-    # 2) The deploy that breaks it (~25 min ago).
+    # 2) The deploy that breaks it (~25 min ago): payment-service shipped a too-low
+    #    retry timeout — the root cause the downstream checkout latency traces back to.
     add(25, "INFO",
-        f"Deploy {SERVICE} {DEPLOY_VERSION} rolled out (commit {DEPLOY_COMMIT})",
+        f"Deploy payment-service {DEPLOY_VERSION} rolled out (commit {DEPLOY_COMMIT}) — "
+        "set retry.timeout_seconds=1 in payment-service/config.yaml",
         **{"deployment.version": DEPLOY_VERSION, "deployment.commit": DEPLOY_COMMIT})
 
-    # 3) Post-deploy degradation (~24..2 min ago): p99 ~520ms, slow orders query.
+    # 3) Post-deploy degradation (~24..2 min ago): the 1s payment retry timeout aborts
+    #    valid calls under load, so checkout p99 doubles waiting on payment retries.
     deg = [
-        ("ERROR", "checkout p99 latency 520ms — SLO breach (threshold 300ms), ~2x baseline"),
-        ("ERROR", "checkout: slow query on orders table took 480ms "
-                  "(db.statement: SELECT * FROM orders WHERE customer_id = ?)"),
-        ("WARN",  f"checkout latency degraded sharply right after the {DEPLOY_VERSION} deploy"),
-        ("ERROR", "checkout p99 latency 535ms — sustained SLO breach"),
-        ("ERROR", "checkout: orders-table query 510ms, index appears missing after schema change"),
-        ("WARN",  "checkout: request queue backing up, p99 still elevated (~500ms)"),
+        ("ERROR", "payment-service: call aborted — deadline exceeded after 1s "
+                  "(retry.timeout_seconds=1 is too aggressive under load)"),
+        ("ERROR", "checkout p99 latency 520ms — SLO breach (threshold 300ms), ~2x baseline, "
+                  "blocked on payment-service retries"),
+        ("WARN",  f"checkout latency degraded sharply right after the payment-service {DEPLOY_VERSION} deploy"),
+        ("ERROR", "payment-service: 1s retry timeout aborting valid calls — should be ~5s "
+                  "to clear downstream p99"),
+        ("ERROR", "checkout p99 latency 535ms — sustained SLO breach driven by payment-service timeouts"),
+        ("WARN",  "payment-service: retry storm — calls time out at 1s then retry, request queue backing up"),
     ]
     for i, m in enumerate(range(24, 0, -2)):  # 24,22,...,2
         sev, msg = deg[i % len(deg)]
@@ -112,8 +117,9 @@ def main() -> int:
 
     logs = build_logs()
     print(f"{DIM}Ingesting {len(logs)} synthetic {SERVICE} logs -> {url}{RESET}")
-    print(f"{DIM}Story: healthy baseline, then {SERVICE} {DEPLOY_VERSION} doubles p99 "
-          f"(~240ms -> ~520ms) via a slow orders-table query.{RESET}")
+    print(f"{DIM}Story: healthy baseline, then the payment-service {DEPLOY_VERSION} deploy "
+          f"sets retry.timeout_seconds=1, aborting valid calls under load and doubling "
+          f"checkout p99 (~240ms -> ~520ms).{RESET}")
 
     try:
         r = requests.post(

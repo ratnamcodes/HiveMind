@@ -24,6 +24,7 @@ single revised agent waits for just itself.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import uuid
@@ -40,7 +41,7 @@ from langgraph.graph import END, START, StateGraph
 from opentelemetry import trace as otel_trace
 from pydantic import BaseModel
 
-from agents.code_arch import CodeFinding, CodeSearchRequest, code_arch
+from agents.code_arch import CodeFinding, CodeSearchRequest, code_arch, fetch_repo_tree
 from agents.customer_liaison import (
     CustomerContextQuery,
     CustomerImpactReport,
@@ -50,6 +51,7 @@ from agents.detective import InvestigationFinding, InvestigationRequest, detecti
 from agents.log_diver import LogQuery, LogTriageReport, log_diver
 from agents.reviewer import CriticVerdict, _phoenix_trace_url, reviewer
 from agents.scribe import IncidentSummary, StoredIncident, scribe
+from hivemind import events
 from hivemind.memory import ColdMemory, Incident
 from orchestrator.critic import critique
 
@@ -72,6 +74,7 @@ FANOUT = [LOG_DIVER, CODE_ARCH, LIAISON]
 class OrchestratorState(TypedDict, total=False):
     incident_id: str
     channel_id: str
+    user_id: str  # whose /ws stream receives this run's live events (T17)
     alert_payload: dict
     finding: dict | None  # InvestigationFinding.model_dump()
     log_report: dict | None  # LogTriageReport.model_dump()
@@ -86,7 +89,7 @@ class OrchestratorState(TypedDict, total=False):
 
 
 # --- helpers ---------------------------------------------------------------
-async def _run_agent(agent, payload_json: str) -> tuple[str, int]:
+async def _run_agent(agent, payload_json: str, on_event=None) -> tuple[str, int]:
     """Run one ADK agent on a JSON payload; return (final text, number of tool calls made).
 
     Fresh session per call — HiveMind investigates each incident in isolation (no cross-
@@ -105,21 +108,26 @@ async def _run_agent(agent, payload_json: str) -> tuple[str, int]:
     async for event in runner.run_async(
         user_id=session.user_id, session_id=session.id, new_message=msg
     ):
-        tool_calls += len(event.get_function_calls() or [])
+        calls = event.get_function_calls() or []
+        tool_calls += len(calls)
+        if on_event:
+            for call in calls:
+                # surface each tool call as a live status pill (e.g. execute_dql)
+                await on_event("tool_call", call.name)
         if event.is_final_response() and event.content and event.content.parts:
             final_text = "".join(p.text or "" for p in event.content.parts)
     return final_text, tool_calls
 
 
 async def _run_with_critic(
-    agent, payload_json: str, schema, node_name: str, *, expect_tools: bool = True
+    agent, payload_json: str, schema, node_name: str, *, expect_tools: bool = True, on_event=None
 ) -> dict:
     """Run an agent, then apply the per-hop critic (schema-valid + non-empty + grounded).
     On failure, retry ONCE before proceeding — catching ungrounded/garbage output at the
     hop instead of letting it ride to the final Reviewer. Returns the validated dict."""
     text, tool_calls = "", 0
     for attempt in range(2):
-        text, tool_calls = await _run_agent(agent, payload_json)
+        text, tool_calls = await _run_agent(agent, payload_json, on_event=on_event)
         crit = critique(text, schema, tool_calls, expect_tools=expect_tools)
         if crit.passed:
             return schema.model_validate_json(text).model_dump(mode="json")
@@ -155,6 +163,40 @@ def _incident_narrative(state: OrchestratorState) -> str:
     return " ".join(parts)
 
 
+# --- live event emission (T17) ---------------------------------------------
+async def _emit(state: OrchestratorState, event: dict) -> None:
+    """Publish a war-room event, best-effort — an event-bus hiccup never fails the run."""
+    try:
+        await events.publish(state.get("user_id") or events.DEFAULT_USER, event)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _emit_cb(state: OrchestratorState, agent_id: str):
+    """A status callback bound to one agent, passed into the agent runner so the
+    pills update in real time as the agent thinks and calls tools."""
+    cid = state["channel_id"]
+
+    async def cb(agent_state: str, tool: str | None = None) -> None:
+        await _emit(state, events.status(cid, agent_id, agent_state, tool))
+
+    return cb
+
+
+async def _stream_summary(state: OrchestratorState, agent_id: str, text: str) -> None:
+    """Stream an agent's human-readable summary into the channel as token events,
+    chunked for a 'typing' feel. The per-agent pacing is what makes the run feel live."""
+    text = (text or "").strip()
+    if not text:
+        return
+    cid = state["channel_id"]
+    mid = f"{agent_id}-{uuid.uuid4().hex[:8]}"
+    words = text.split()
+    for i in range(0, len(words), 6):
+        await _emit(state, events.token(cid, agent_id, mid, " ".join(words[i : i + 6]) + " "))
+        await asyncio.sleep(0.03)
+
+
 # --- nodes -----------------------------------------------------------------
 async def detective_node(state: OrchestratorState) -> dict:
     p = state["alert_payload"]
@@ -164,10 +206,14 @@ async def detective_node(state: OrchestratorState) -> dict:
         affected_services=p.get("affected_services", []),
         severity=p.get("severity", "sev3"),
     )
+    cb = _emit_cb(state, DETECTIVE)
+    await cb("thinking")
     with _tracer.start_as_current_span(DETECTIVE):
         finding = await _run_with_critic(
-            detective, req.model_dump_json(), InvestigationFinding, DETECTIVE
+            detective, req.model_dump_json(), InvestigationFinding, DETECTIVE, on_event=cb
         )
+    await cb("done")
+    await _stream_summary(state, DETECTIVE, finding.get("root_cause_hypothesis") or "")
     return {"finding": finding}
 
 
@@ -178,10 +224,14 @@ async def log_diver_node(state: OrchestratorState) -> dict:
         query=(f.get("root_cause_hypothesis") if f else state["alert_payload"].get("alert", "")),
         services=_services(state),
     )
+    cb = _emit_cb(state, LOG_DIVER)
+    await cb("thinking")
     with _tracer.start_as_current_span(LOG_DIVER):
         log_report = await _run_with_critic(
-            log_diver, req.model_dump_json(), LogTriageReport, LOG_DIVER
+            log_diver, req.model_dump_json(), LogTriageReport, LOG_DIVER, on_event=cb
         )
+    await cb("done")
+    await _stream_summary(state, LOG_DIVER, log_report.get("summary") or "")
     return {"log_report": log_report}
 
 
@@ -197,11 +247,23 @@ async def code_arch_node(state: OrchestratorState) -> dict:
         arize_trace_url=state.get("arize_trace_url"),
         dynatrace_notebook_url=(f.get("notebook_url") if f else None),
         workflow_public_url=(f.get("workflow_public_url") if f else None),
+        # Ground CodeArch in the repo's real layout so it reads an actual file
+        # instead of guessing paths (the bug that left mr_url null).
+        repo_tree=fetch_repo_tree(),
     )
+    cb = _emit_cb(state, CODE_ARCH)
+    await cb("thinking")
     with _tracer.start_as_current_span(CODE_ARCH):
         code_finding = await _run_with_critic(
-            code_arch, req.model_dump_json(), CodeFinding, CODE_ARCH
+            code_arch, req.model_dump_json(), CodeFinding, CODE_ARCH, on_event=cb
         )
+    await cb("done")
+    _mr = code_finding.get("merge_request_url")
+    await _stream_summary(
+        state,
+        CODE_ARCH,
+        (code_finding.get("explanation") or "") + (f" (MR: {_mr})" if _mr else ""),
+    )
     return {"code_finding": code_finding}
 
 
@@ -212,10 +274,14 @@ async def customer_liaison_node(state: OrchestratorState) -> dict:
         severity=state["alert_payload"].get("severity", "sev3"),
         incident_id=state["incident_id"],
     )
+    cb = _emit_cb(state, LIAISON)
+    await cb("thinking")
     with _tracer.start_as_current_span(LIAISON):
         customer_report = await _run_with_critic(
-            customer_liaison, req.model_dump_json(), CustomerImpactReport, LIAISON
+            customer_liaison, req.model_dump_json(), CustomerImpactReport, LIAISON, on_event=cb
         )
+    await cb("done")
+    await _stream_summary(state, LIAISON, customer_report.get("impact_summary") or "")
     return {"customer_report": customer_report}
 
 
@@ -236,8 +302,10 @@ async def scribe_node(state: OrchestratorState) -> dict:
         mr_url=mr_url,
         participants=[DETECTIVE, *FANOUT],
     )
+    cb = _emit_cb(state, SCRIBE)
+    await cb("thinking")
     with _tracer.start_as_current_span(SCRIBE):
-        text, _ = await _run_agent(scribe, summary_in.model_dump_json())
+        text, _ = await _run_agent(scribe, summary_in.model_dump_json(), on_event=cb)
     stored = StoredIncident.model_validate_json(text)
 
     # Scribe has no write tool — the node persists the synthesis to Atlas ColdMemory.
@@ -258,6 +326,8 @@ async def scribe_node(state: OrchestratorState) -> dict:
         stored = stored.model_copy(update={"stored": False})
         with _tracer.start_as_current_span("scribe.persist_error") as s:
             s.set_attribute("error", f"{type(e).__name__}: {e}")
+    await cb("done")
+    await _stream_summary(state, SCRIBE, stored.summary or stored.title or "")
     return {"stored_incident": stored.model_dump(mode="json")}
 
 
@@ -267,9 +337,18 @@ async def reviewer_node(state: OrchestratorState) -> dict:
         k: state.get(k)
         for k in ("finding", "log_report", "code_finding", "customer_report", "stored_incident")
     }
+    cb = _emit_cb(state, REVIEWER)
+    await cb("thinking")
     with _tracer.start_as_current_span(REVIEWER):
-        text, _ = await _run_agent(reviewer, json.dumps(incident_view, default=str))
+        text, _ = await _run_agent(reviewer, json.dumps(incident_view, default=str), on_event=cb)
     verdict = CriticVerdict.model_validate_json(text)
+    await cb("done")
+    await _stream_summary(
+        state,
+        REVIEWER,
+        f"Verdict: {verdict.verdict}."
+        + (f" {verdict.rewrite_hint}" if verdict.rewrite_hint else ""),
+    )
     out: dict = {"verdict": verdict.model_dump(mode="json")}
     if verdict.verdict == "revise":
         out["revision_count"] = state.get("revision_count", 0) + 1
@@ -332,7 +411,9 @@ def build_graph(checkpointer=None):
     for n in FANOUT:
         g.add_edge(n, SCRIBE)  # fan-in: Scribe waits for whichever specialists ran
     g.add_edge(SCRIBE, REVIEWER)
-    g.add_conditional_edges(REVIEWER, route_after_reviewer, [*FANOUT, "finalize"])
+    # Reviewer can revise back to ANY specialist (incl. detective) or finalize. detective
+    # must be in this list or a `revise -> detective` verdict KeyErrors in routing.
+    g.add_conditional_edges(REVIEWER, route_after_reviewer, [DETECTIVE, *FANOUT, "finalize"])
     g.add_edge("finalize", END)
 
     return g.compile(checkpointer=checkpointer or MemorySaver())
@@ -359,6 +440,7 @@ class OrchestratorRunner:
     async def run(self, alert_payload: dict) -> OrchestratorOutput:
         incident_id = alert_payload.get("incident_id") or f"INC-{uuid.uuid4().hex[:8]}"
         channel_id = alert_payload.get("channel_id", incident_id)
+        user_id = alert_payload.get("user_id") or events.DEFAULT_USER
         config = {"configurable": {"thread_id": incident_id}}
 
         async with AsyncRedisSaver.from_conn_string(self._redis_url) as cp:
@@ -378,6 +460,7 @@ class OrchestratorRunner:
                     init: OrchestratorState = {
                         "incident_id": incident_id,
                         "channel_id": channel_id,
+                        "user_id": user_id,
                         "alert_payload": alert_payload,
                         "revision_count": 0,
                         "trace_id": trace_id,
@@ -386,6 +469,14 @@ class OrchestratorRunner:
                     final = await graph.ainvoke(init, config=config)
 
         output = final.get("output", {})
+        # Final "complete" event — the frontend swaps the streaming placeholder for the
+        # resolved summary (MR link, notebook, customers affected, verdict).
+        try:
+            await events.publish(
+                user_id, events.complete(channel_id, f"summary-{incident_id}", output)
+            )
+        except Exception:  # noqa: BLE001
+            pass
         return OrchestratorOutput(
             incident_id=incident_id,
             status="escalated" if output.get("escalated") else "resolved",

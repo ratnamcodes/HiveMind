@@ -25,7 +25,9 @@ brackets.
 from __future__ import annotations
 
 import os
+from urllib.parse import quote
 
+import requests
 from dotenv import load_dotenv
 from google.adk.agents import LlmAgent as Agent
 from google.adk.tools.mcp_tool import McpToolset
@@ -42,6 +44,34 @@ _GITLAB_API_URL = (
     os.environ.get("GITLAB_URL", "https://gitlab.com").rstrip("/") + "/api/v4"
 )
 _TARGET_PROJECT = os.environ.get("GITLAB_TARGET_PROJECT", "")
+
+
+def fetch_repo_tree(max_files: int = 200) -> list[str]:
+    """List the target repo's files via the GitLab REST tree API (recursive).
+
+    This is how the orchestrator grounds CodeArch BEFORE the LLM runs: we hand the
+    agent the exact paths that exist so it reads a real file instead of guessing
+    (the original failure mode: ~25 "File not found" on invented paths, no MR). The
+    REST endpoint is reliable where the MCP's get_repository_tree was returning
+    "Repository or path not found". Returns [] on any error — the agent still has
+    get_repository_tree as a fallback.
+    """
+    token = os.environ.get("GITLAB_BOT_TOKEN") or os.environ.get("GITLAB_TOKEN")
+    if not token or not _TARGET_PROJECT:
+        return []
+    pid = quote(_TARGET_PROJECT, safe="")
+    try:
+        r = requests.get(
+            f"{_GITLAB_API_URL}/projects/{pid}/repository/tree",
+            headers={"PRIVATE-TOKEN": token},
+            params={"recursive": "true", "per_page": max_files},
+            timeout=15,
+        )
+        if r.status_code != 200:
+            return []
+        return [item["path"] for item in r.json() if item.get("type") == "blob"]
+    except requests.RequestException:
+        return []
 
 
 class CodeSearchRequest(BaseModel):
@@ -64,6 +94,9 @@ class CodeSearchRequest(BaseModel):
     # --- optional targeting hints ---
     repos: list[str] = Field(default_factory=list)
     symbols: list[str] = Field(default_factory=list)
+    # The exact files that exist in the target repo (injected by the node via the
+    # GitLab REST tree API) — CodeArch picks a REAL path from here instead of guessing.
+    repo_tree: list[str] = Field(default_factory=list)
 
 
 class CodeFinding(BaseModel):
@@ -96,6 +129,10 @@ gitlab_tools = McpToolset(
             env={
                 "GITLAB_PERSONAL_ACCESS_TOKEN": os.environ["GITLAB_BOT_TOKEN"],
                 "GITLAB_API_URL": _GITLAB_API_URL,
+                # Default project for every tool call so the agent never has to pass
+                # (or mis-pass) project_id — passing a bad project/path is what made
+                # get_repository_tree return "Repository or path not found".
+                "GITLAB_PROJECT_ID": _TARGET_PROJECT,
                 "USE_PIPELINE": "true",
                 "GITLAB_READ_ONLY_MODE": "false",
             },
@@ -107,6 +144,11 @@ gitlab_tools = McpToolset(
     # Expose ONLY the fix-loop tools. Keeps CodeArch on-rails and structurally out of the
     # destructive surface (no delete_*, no force-push) it has no business touching.
     tool_filter=[
+        # Ground FIRST in the repo's real layout. get_repository_tree lists the files
+        # that ACTUALLY exist, so CodeArch reads real paths instead of inventing them —
+        # the demo's original failure mode was ~25 "File not found" on guessed paths
+        # (go.mod, checkout-service/…) because it had no way to see the tree.
+        "get_repository_tree",
         # Code search is OPTIONAL: this server build may not expose a search tool (it
         # didn't expose search_project_code). The loop falls back to get_file_contents.
         # Kept here so it's used automatically if a future build does expose it.
@@ -130,7 +172,7 @@ comment you create is attributed to the bot, never to a human. That attribution 
 whole point: it makes an AI-authored change's provenance unambiguous.
 
 You receive ONE incident as JSON with these fields: channel_id, question, incident_id, \
-short_title, root_cause_hypothesis, confidence, arize_trace_url, dynatrace_notebook_url, \
+short_title, root_cause_hypothesis, confidence, repo_tree, arize_trace_url, dynatrace_notebook_url, \
 workflow_public_url, mongo_doc_id. In the two templates below, each angle-bracketed token \
 like <incident_id> is a PLACEHOLDER: replace it with that field's value from the incident \
 JSON (verbatim — never invent a URL or id), and leave NO angle brackets in your output. \
@@ -142,10 +184,15 @@ Its default (target) branch is: main
 
 Run this loop IN ORDER. Do not wander off it.
 
-1. Locate and read the file at fault. The incident's question names the affected service \
-and usually the exact file path. Call get_file_contents on that file in the repo so you \
-see the current code before changing it. (If a code-search tool happens to be available \
-you MAY use it to find the file first, but it is optional — get_file_contents is enough.)
+1. Ground yourself in the repository FIRST. The incident JSON includes a `repo_tree` \
+field: the EXACT list of files that exist in the repo, fetched for you. Read it and pick \
+the SINGLE path most relevant to the incident — match on the affected service and the \
+root-cause hypothesis. NEVER pick a path that is not in repo_tree (no inventing go.mod, \
+package.json, or checkout-service/… — guessing returns "File not found" and wastes your \
+budget). Then call get_file_contents on that REAL path to read the current code before \
+changing it. Inline comments flagging a bad value (e.g. a number marked "too low") point \
+you straight to the fix. (repo_tree is authoritative; if it is somehow empty you MAY call \
+get_repository_tree to list the files, but normally you do not need any listing tool.)
 2. Draft a MINIMAL patch — the smallest change that fixes the root cause and nothing \
 else. Work out the full new contents of that one file. (If the file genuinely does not \
 exist, create the corrected file instead, and say so in the MR.)

@@ -154,25 +154,19 @@ phoenix_tools = McpToolset(
         ),
         timeout=30.0,
     ),
-    # On-rails: read traces, manage the rubric prompt, read datasets/experiments.
-    # phoenix-mcp has NO write-annotation tool, so add-span-annotation is done via
-    # the SDK in review() below; running experiments is SDK-only too (T18).
+    # ONLY bounded-payload tools here. The trace/span/dataset/experiment readers
+    # (get-spans, list-traces, get-trace, get-dataset, …) return UNBOUNDED payloads —
+    # Phoenix accumulates every incident's spans — and feeding one back to the model
+    # blew past Gemini's 1M-token context (400 INVALID_ARGUMENT), killing the reviewer
+    # node mid-incident. The verdict is rendered from the agent outputs already in the
+    # prompt plus the rubric, so the reviewer never needs to pull raw traces here. Span
+    # annotations (T18) go through the phoenix-client SDK in review(), not these tools.
     tool_filter=[
-        "list-projects",
-        "list-traces",
-        "get-trace",
-        "get-spans",
-        "get-span-annotations",
         "list-prompts",
         "get-prompt",
         "get-prompt-version-by-tag",
-        "list-prompt-versions",
         "upsert-prompt",
         "add-prompt-version-tag",
-        "list-datasets",
-        "get-dataset",
-        "list-experiments-for-dataset",
-        "get-experiment-by-id",
     ],
 )
 
