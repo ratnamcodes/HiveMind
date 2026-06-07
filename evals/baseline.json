@@ -1,0 +1,4 @@
+{
+  "pass_rate": 0.0,
+  "_note": "Main-branch eval pass_rate. Seeded at 0.0 so nothing is blocked until the first green main run; the evals workflow runs `ci_gate.py --update` on main to set the real baseline. PRs are blocked if their pass_rate drops more than 2 points below this."
+}

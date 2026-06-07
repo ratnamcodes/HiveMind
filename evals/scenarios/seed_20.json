@@ -1,0 +1,275 @@
+[
+  {
+    "name": "checkout-latency-p99-doubled",
+    "description": "Canonical incident: checkout p99 doubles after the payment-service deploy that set an over-aggressive retry timeout.",
+    "input_alert": {
+      "alert": "Checkout latency p99 doubled to 1.8s starting 14:32; error rate normal. Suspect the 14:05 payment-service deploy that added a synchronous payments call.",
+      "affected_services": ["checkout", "payments"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["get_file_contents", "create_merge_request"], "must_output_fields": ["merge_request_url"]},
+      {"agent": "customer_liaison", "must_call_tools": [], "must_output_fields": ["customers_affected"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "payment-deadline-exceeded",
+    "description": "Payment calls abort with deadline-exceeded under load; retry timeout too low.",
+    "input_alert": {
+      "alert": "payment-service: surge of 'deadline exceeded' aborts after the latest deploy; checkout success rate dipping.",
+      "affected_services": ["payments", "checkout"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "checkout-slo-breach-sev1",
+    "description": "Sev1 escalation: sustained checkout SLO breach traced to the payment retry timeout.",
+    "input_alert": {
+      "alert": "SEV1: sustained checkout SLO breach (p99 > 1.5s for 20m), revenue impact; began right after the 14:05 payment-service rollout.",
+      "affected_services": ["checkout", "payments"],
+      "severity": "sev1"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1"]},
+    "rubric_overrides": {"grounding": 0.4, "no_hallucination": 0.3}
+  },
+  {
+    "name": "payment-retry-storm",
+    "description": "Retry storm: 1s timeout causes retries that pile up and back the request queue.",
+    "input_alert": {
+      "alert": "payment-service retry storm — calls time out at 1s then retry, request queue backing up; checkout latency climbing.",
+      "affected_services": ["payments"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "checkout-timeouts-under-load",
+    "description": "Checkout timeouts spike only under load — config regression in payment retry handling.",
+    "input_alert": {
+      "alert": "Checkout requests timing out under peak load since the afternoon deploy; off-peak fine. Payments path implicated.",
+      "affected_services": ["checkout", "payments"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "payment-config-regression",
+    "description": "Config regression: a deploy changed payment-service retry settings.",
+    "input_alert": {
+      "alert": "Regression suspected in payment-service config after the 14:05 deploy; downstream checkout latency up ~2x.",
+      "affected_services": ["payments", "checkout"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "implicated_service"]},
+      {"agent": "code_arch", "must_call_tools": ["get_file_contents", "create_merge_request"], "must_output_fields": ["merge_request_url", "suggested_fix"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "checkout-p95-regression-sev3",
+    "description": "Lower-severity p95 regression; still traces to the payment retry timeout.",
+    "input_alert": {
+      "alert": "Minor: checkout p95 up ~30% since the afternoon; no SLO breach yet. Possibly the payments deploy.",
+      "affected_services": ["checkout", "payments"],
+      "severity": "sev3"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev2", "sev3"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "payment-5xx-after-deploy",
+    "description": "Spike in payment 5xx-equivalent failures right after the deploy window.",
+    "input_alert": {
+      "alert": "payment-service failures spiked at 14:06, one minute after the 14:05 rollout; checkout conversions dropping.",
+      "affected_services": ["payments", "checkout"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "log_diver", "must_call_tools": [], "must_output_fields": ["summary"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "slow-checkout-suspect-payments",
+    "description": "Operator hunch: slow checkout, suspect the payments dependency.",
+    "input_alert": {
+      "alert": "Checkout feels slow this afternoon, customers complaining at the payment step. Did the payments deploy do this?",
+      "affected_services": ["checkout", "payments"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2", "sev3"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "payment-timeout-aborting-valid-calls",
+    "description": "Valid payment calls aborted by an over-aggressive 1s timeout.",
+    "input_alert": {
+      "alert": "payment-service is aborting valid calls — looks like an over-aggressive timeout introduced in the last deploy.",
+      "affected_services": ["payments"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["get_file_contents", "create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "checkout-conversion-drop",
+    "description": "Business-metric framing: checkout conversion dropped; trace to the payments latency.",
+    "input_alert": {
+      "alert": "Checkout conversion dropped ~8% since 14:30; funnel shows drop-off at payment. Eng suspects the payments deploy.",
+      "affected_services": ["checkout", "payments"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "customer_liaison", "must_call_tools": [], "must_output_fields": ["customers_affected", "impact_summary"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "post-deploy-latency-regression",
+    "description": "Generic post-deploy latency regression; system should localize to payment-service retry config.",
+    "input_alert": {
+      "alert": "Latency regression detected after the 14:05 deploy window; checkout and payments both elevated.",
+      "affected_services": ["checkout", "payments"],
+      "severity": "sev2"
+    },
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "implicated_deploy"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "payment-timeout-regression-sev1",
+    "description": "Sev1: payment-service timeout regression aborting transactions at scale.",
+    "input_alert": {"alert": "SEV1: payment-service aborting transactions at scale since the 14:05 deploy; checkout failing for many users.", "affected_services": ["payments", "checkout"], "severity": "sev1"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "checkout-cart-abandonment",
+    "description": "Cart abandonment spike traced to the slow payment step.",
+    "input_alert": {"alert": "Cart abandonment up sharply at the payment step since this afternoon; suspect the payments deploy.", "affected_services": ["checkout", "payments"], "severity": "sev2"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis"]},
+      {"agent": "customer_liaison", "must_call_tools": [], "must_output_fields": ["customers_affected"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "payment-gateway-latency",
+    "description": "Payment gateway latency from the retry-timeout config.",
+    "input_alert": {"alert": "payment gateway calls slow and timing out post-deploy; checkout p99 elevated.", "affected_services": ["payments"], "severity": "sev2"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["get_file_contents", "create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "retry-config-drift",
+    "description": "Config drift in payment-service retry settings after a deploy.",
+    "input_alert": {"alert": "Config drift suspected: payment-service retry settings changed in the 14:05 deploy; latency up.", "affected_services": ["payments", "checkout"], "severity": "sev2"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "implicated_service"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url", "suggested_fix"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "checkout-flakiness-intermittent",
+    "description": "Intermittent checkout failures correlating with payment retries.",
+    "input_alert": {"alert": "Intermittent checkout failures since the afternoon; bursts line up with payment retries.", "affected_services": ["checkout", "payments"], "severity": "sev3"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev2", "sev3"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "payment-p99-spike",
+    "description": "Direct p99 spike on payment-service after the deploy.",
+    "input_alert": {"alert": "payment-service p99 spiked from 240ms to 520ms right after the 14:05 rollout.", "affected_services": ["payments"], "severity": "sev2"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "implicated_deploy"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "post-rollout-payment-errors",
+    "description": "Payment error burst immediately after the rollout.",
+    "input_alert": {"alert": "Burst of payment-service errors at 14:06, one minute after the rollout; checkout conversions down.", "affected_services": ["payments", "checkout"], "severity": "sev2"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "log_diver", "must_call_tools": [], "must_output_fields": ["summary"]},
+      {"agent": "code_arch", "must_call_tools": ["create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  },
+  {
+    "name": "checkout-degradation-peak-hours",
+    "description": "Peak-hour checkout degradation from the aggressive payment retry timeout.",
+    "input_alert": {"alert": "Checkout degrades during peak hours since the payments deploy; the 1s retry timeout looks too aggressive under load.", "affected_services": ["checkout", "payments"], "severity": "sev2"},
+    "expected_intermediates": [
+      {"agent": "detective", "must_call_tools": ["execute_dql"], "must_output_fields": ["root_cause_hypothesis", "confidence"]},
+      {"agent": "code_arch", "must_call_tools": ["get_file_contents", "create_merge_request"], "must_output_fields": ["merge_request_url"]}
+    ],
+    "expected_final": {"mr_filed": true, "notebook_created": true, "customers_identified": true, "severity_within": ["sev1", "sev2"]},
+    "rubric_overrides": {}
+  }
+]

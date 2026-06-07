@@ -58,6 +58,10 @@ from orchestrator.critic import critique
 load_dotenv()
 
 MAX_REVISIONS = 2
+# Per-agent hard cap (seconds): a hung or rate-limit-stalled LLM/tool call must never
+# freeze a whole incident (that's what froze the eval suite on scenario #6). The per-hop
+# critic retries once on a timed-out (empty) result, so a transient stall self-heals.
+AGENT_TIMEOUT = 240.0
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 _tracer = otel_trace.get_tracer("hivemind.orchestrator")
 
@@ -105,17 +109,27 @@ async def _run_agent(agent, payload_json: str, on_event=None) -> tuple[str, int]
     )
     msg = types.Content(role="user", parts=[types.Part(text=payload_json)])
     final_text, tool_calls = "", 0
-    async for event in runner.run_async(
-        user_id=session.user_id, session_id=session.id, new_message=msg
-    ):
-        calls = event.get_function_calls() or []
-        tool_calls += len(calls)
-        if on_event:
-            for call in calls:
-                # surface each tool call as a live status pill (e.g. execute_dql)
-                await on_event("tool_call", call.name)
-        if event.is_final_response() and event.content and event.content.parts:
-            final_text = "".join(p.text or "" for p in event.content.parts)
+
+    async def _consume() -> None:
+        nonlocal final_text, tool_calls
+        async for event in runner.run_async(
+            user_id=session.user_id, session_id=session.id, new_message=msg
+        ):
+            calls = event.get_function_calls() or []
+            tool_calls += len(calls)
+            if on_event:
+                for call in calls:
+                    # surface each tool call as a live status pill (e.g. execute_dql)
+                    await on_event("tool_call", call.name)
+            if event.is_final_response() and event.content and event.content.parts:
+                final_text = "".join(p.text or "" for p in event.content.parts)
+
+    try:
+        await asyncio.wait_for(_consume(), timeout=AGENT_TIMEOUT)
+    except asyncio.TimeoutError:
+        # Hung/throttled agent → return what we have (likely empty); the per-hop critic
+        # treats it as a failed attempt and retries, so the incident proceeds, never freezes.
+        pass
     return final_text, tool_calls
 
 
@@ -438,6 +452,11 @@ class OrchestratorRunner:
         self._redis_url = redis_url or _REDIS_URL
 
     async def run(self, alert_payload: dict) -> OrchestratorOutput:
+        """Public entry point (/chat + webhook): returns just the output object."""
+        out, _final = await self.run_full(alert_payload)
+        return out
+
+    async def run_full(self, alert_payload: dict) -> tuple[OrchestratorOutput, dict]:
         incident_id = alert_payload.get("incident_id") or f"INC-{uuid.uuid4().hex[:8]}"
         channel_id = alert_payload.get("channel_id", incident_id)
         user_id = alert_payload.get("user_id") or events.DEFAULT_USER
@@ -477,12 +496,17 @@ class OrchestratorRunner:
             )
         except Exception:  # noqa: BLE001
             pass
-        return OrchestratorOutput(
-            incident_id=incident_id,
-            status="escalated" if output.get("escalated") else "resolved",
-            output=output,
-            trace_id=final.get("trace_id") or "",
-            arize_trace_url=final.get("arize_trace_url"),
+        # run_full also returns the raw final state so the eval runner (T18) can assert
+        # per-agent intermediate outputs (finding/code_finding/customer_report/…).
+        return (
+            OrchestratorOutput(
+                incident_id=incident_id,
+                status="escalated" if output.get("escalated") else "resolved",
+                output=output,
+                trace_id=final.get("trace_id") or "",
+                arize_trace_url=final.get("arize_trace_url"),
+            ),
+            final,
         )
 
 

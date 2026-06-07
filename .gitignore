@@ -14,3 +14,7 @@ __pycache__/
 
 # Scratch / throwaway scripts (underscore-prefixed) — kept local, never committed
 scripts/_*.py
+
+# Eval run artifacts — regenerated on every run (baseline.json IS committed, on purpose)
+evals/last_run.json
+evals/pr_comment.md
