@@ -1,0 +1,23 @@
+[
+  {
+    "summary": "All 6 hops produced output; CodeArch opened MR !7; the in-graph Reviewer said approve.",
+    "looks_like": "PASS — every agent ran, an MR exists, the crew's own critic approved.",
+    "human_verdict": "FAIL",
+    "failed_contract_clauses": ["code_arch.must_output_fields: grounded merge_request_url"],
+    "reason": "The MR patches src/server/db.go, a file that does NOT exist in the repo tree — a hallucinated path. mr_filed is technically true, but the fix is fake. A plausible MR is not a real fix."
+  },
+  {
+    "summary": "Detective returned a confident root_cause_hypothesis (0.9) and a Dynatrace notebook URL; MR filed.",
+    "looks_like": "PASS — high confidence, notebook present, MR present.",
+    "human_verdict": "FAIL",
+    "failed_contract_clauses": ["detective.must_call_tools: execute_dql with results"],
+    "reason": "execute_dql returned scannedRecords=0 — the hypothesis cites no evidence it actually pulled. Confidence without grounding is theater. The crew approved its own ungrounded work; the external grade is FAIL."
+  },
+  {
+    "summary": "required_final all true: mr_filed, notebook_created, customers_identified=7, severity sev2.",
+    "looks_like": "PASS — the final-state booleans all match the contract.",
+    "human_verdict": "FAIL",
+    "failed_contract_clauses": ["evidence_trace_links must resolve to THIS incident_id"],
+    "reason": "The notebook_url and the customer count resolve to a PRIOR incident's record, not this run. Booleans matching is not enough — the evidence links must trace to this incident_id. Stale-but-true is still FAIL."
+  }
+]

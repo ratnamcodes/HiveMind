@@ -460,7 +460,9 @@ class OrchestratorRunner:
         incident_id = alert_payload.get("incident_id") or f"INC-{uuid.uuid4().hex[:8]}"
         channel_id = alert_payload.get("channel_id", incident_id)
         user_id = alert_payload.get("user_id") or events.DEFAULT_USER
-        config = {"configurable": {"thread_id": incident_id}}
+        # The harness loop (T19) passes a per-iteration thread_id so each retry runs FRESH
+        # (not a checkpoint-resume) while keeping incident_id stable for the MR/evaluator.
+        config = {"configurable": {"thread_id": alert_payload.get("thread_id") or incident_id}}
 
         async with AsyncRedisSaver.from_conn_string(self._redis_url) as cp:
             await cp.asetup()  # idempotent RediSearch index creation

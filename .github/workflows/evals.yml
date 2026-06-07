@@ -22,7 +22,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Mechanically-enforced taste (T19): structural gate — fast, no secrets. The expensive
+  # live eval job below only runs if this passes.
+  taste:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema
+      - name: Structural taste checks (AGENTS.md, contract schema, agent tools)
+        run: python harness/check_taste.py
+
   evals:
+    needs: taste
     runs-on: ubuntu-latest
     services:
       redis:

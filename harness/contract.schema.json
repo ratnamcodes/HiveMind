@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HiveMind per-incident done-contract",
+  "description": "What 'done' means for one incident. Same shape as T18 expected_intermediates/expected_final (reused, not reinvented). The Evaluator sets this before the crew runs and grades the finished run against it.",
+  "type": "object",
+  "required": ["incident_id", "required_intermediates", "required_final"],
+  "additionalProperties": false,
+  "properties": {
+    "incident_id": { "type": "string" },
+    "required_intermediates": {
+      "type": "array",
+      "description": "Per-agent obligations: which tools it must call and which output fields it must populate.",
+      "items": {
+        "type": "object",
+        "required": ["agent", "must_call_tools", "must_output_fields"],
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "type": "string",
+            "enum": ["detective", "log_diver", "code_arch", "customer_liaison", "scribe", "reviewer"]
+          },
+          "must_call_tools": { "type": "array", "items": { "type": "string" } },
+          "must_output_fields": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "required_final": {
+      "type": "object",
+      "description": "The incident outcome the run must reach.",
+      "required": ["mr_filed", "notebook_created", "customers_identified", "severity_within"],
+      "additionalProperties": false,
+      "properties": {
+        "mr_filed": { "type": "boolean" },
+        "notebook_created": { "type": "boolean" },
+        "customers_identified": { "type": "boolean" },
+        "severity_within": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["sev1", "sev2", "sev3"] }
+        }
+      }
+    },
+    "rubric_weights": {
+      "type": "object",
+      "description": "Optional per-criterion weights for the hivemind-grounding-rubric judge.",
+      "additionalProperties": { "type": "number" }
+    }
+  }
+}
