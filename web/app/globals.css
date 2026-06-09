@@ -144,3 +144,28 @@
     background: transparent;
   }
 }
+
+/* Landing war-room demo: gentle reveal for each streamed line. */
+@keyframes hm-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hm-reveal { animation: hm-reveal 0.35s ease-out both; }
+
+/* Landing-page (Solar-style) motion. Plain @keyframes so arbitrary `animate-[name_...]` and the
+   Orbit's inline `animationName` resolve regardless of which Tailwind utilities are emitted. */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+@keyframes wave {
+  0%, 100% { transform: translateY(0); opacity: 0.45; }
+  50% { transform: translateY(-3px); opacity: 1; }
+}
+@keyframes gridMovingLine {
+  0% { transform: translateX(100%); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateX(-100%); opacity: 1; }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
