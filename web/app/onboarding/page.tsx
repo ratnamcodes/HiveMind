@@ -106,7 +106,9 @@ function ConnectCard({
 export default function Onboarding() {
   const [dt, setDt] = useState(false);
   const [gl, setGl] = useState(false);
-  const ready = dt && gl;
+  // Connect at least one to continue — the war room works on either, and you can add the other
+  // any time. (Hard-gating on both blocks the demo whenever one tenant/token is unavailable.)
+  const ready = dt || gl;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -123,8 +125,8 @@ export default function Onboarding() {
       <main className="mx-auto max-w-3xl px-6 py-12">
         <h1 className="text-2xl font-semibold tracking-tight">Connect your stack</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          HiveMind reads incidents from Dynatrace and ships fixes to GitLab. Connect both and run your first
-          real incident. Tokens are stored encrypted and never shown again.
+          HiveMind reads incidents from Dynatrace and ships fixes to GitLab. Connect at least one to
+          continue, then run your first real incident. Tokens are stored encrypted and never shown again.
         </p>
 
         <div className="mt-8 space-y-4">
@@ -133,8 +135,8 @@ export default function Onboarding() {
             title="Dynatrace"
             partner="Observability"
             Icon={Activity}
-            urlPlaceholder="Tenant URL (e.g. https://abc12345.apps.dynatrace.com) — blank uses configured"
-            tokenLabel="API token (dt0c01…) — blank uses configured"
+            urlPlaceholder="Tenant URL (e.g. https://abc12345.apps.dynatrace.com)"
+            tokenLabel="API token (dt0c01…)"
             onConnected={setDt}
           />
           <ConnectCard
@@ -142,8 +144,8 @@ export default function Onboarding() {
             title="GitLab"
             partner="Source + merge requests"
             Icon={GitPullRequest}
-            urlPlaceholder="GitLab URL (default https://gitlab.com) — blank uses configured"
-            tokenLabel="Personal access token (api, write_repository) — blank uses configured"
+            urlPlaceholder="GitLab URL (default https://gitlab.com)"
+            tokenLabel="Personal access token (api, write_repository)"
             onConnected={setGl}
           />
         </div>

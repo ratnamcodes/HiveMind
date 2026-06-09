@@ -144,3 +144,9 @@
     background: transparent;
   }
 }
+/* Landing war-room demo: gentle reveal for each streamed line. */
+@keyframes hm-reveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hm-reveal { animation: hm-reveal 0.35s ease-out both; }

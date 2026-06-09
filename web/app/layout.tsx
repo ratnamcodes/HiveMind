@@ -6,9 +6,22 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HiveMind — AI SRE that fixes incidents in your real telemetry",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://hivemind.app"),
+  title: "HiveMind · AI that fixes your incidents end to end",
   description:
-    "HiveMind watches your Dynatrace telemetry, finds the root cause in real production data, opens the GitLab fix, and proves your service recovered — with a human approving every change.",
+    "The moment Dynatrace flags a real problem, six AI specialists find the cause in your live data, open the fix in GitLab, and prove your service recovered. You approve every change.",
+  openGraph: {
+    title: "HiveMind · AI that fixes your incidents end to end",
+    description:
+      "Dynatrace flags the problem. Six specialists find the fix. You approve. Your service recovers.",
+    siteName: "HiveMind",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HiveMind · AI that fixes your incidents end to end",
+    description: "Dynatrace flags the problem. Six specialists find the fix. You approve. Your service recovers.",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

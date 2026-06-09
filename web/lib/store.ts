@@ -27,6 +27,7 @@ const BACKEND_BASE =
   (process.env.NEXT_PUBLIC_WS_BASE
     ? process.env.NEXT_PUBLIC_WS_BASE.replace(/^ws/, "http")
     : "http://localhost:8000");
+const WS_USER = process.env.NEXT_PUBLIC_WS_USER || "hivemind";
 
 interface WarRoomState {
   channels: Channel[];
@@ -169,7 +170,7 @@ function reduceEvent(s: EventSlice, ev: WarRoomEvent): EventSlice {
     const verdict = escalated ? "escalated" : String(payload.verdict ?? "resolved");
     const ca = payload.customers_affected;
     const text =
-      `Incident ${escalated ? "escalated" : "resolved"} — verdict: ${verdict}.` +
+      `Incident ${escalated ? "escalated" : "resolved"}. Verdict: ${verdict}.` +
       (ca != null ? ` ${ca} customers affected.` : "");
     const list = s.messagesByChannel[ev.channel_id] ?? [];
     const cleared = list.map((m) =>
@@ -234,7 +235,7 @@ function reduceEvent(s: EventSlice, ev: WarRoomEvent): EventSlice {
       id: `decided-${ev.decision_id}`,
       channelId: ev.channel_id,
       author: { type: "system" },
-      text: `Human decision: ${ev.choice}${ev.detail ? ` — ${ev.detail}` : ""}`,
+      text: `Human decision: ${ev.choice}${ev.detail ? `. ${ev.detail}` : ""}`,
       ts: new Date().toISOString(),
     };
     const list = s.messagesByChannel[ev.channel_id] ?? [];
@@ -345,6 +346,15 @@ export const useWarRoom = create<WarRoomState>((set, get) => ({
         [channelId]: [...(s.messagesByChannel[channelId] ?? []), optimistic],
       },
     }));
+
+    // Ask the crew to reply. Routes to the @mentioned agent (else Detective); the reply streams
+    // back into this channel over /ws.
+    const mention = trimmed.match(/@([a-z_]+)/);
+    void fetch(`${BACKEND_BASE}/api/chat?user=${encodeURIComponent(WS_USER)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel_id: channelId, text: trimmed, agent_id: mention?.[1] ?? "" }),
+    }).catch(() => {});
 
     if (get().liveChannels[channelId]) return; // live channels have no REST store
 

@@ -37,6 +37,7 @@ from mcp import StdioServerParameters
 from pydantic import BaseModel, Field
 
 from hivemind.limiter import tool_call_budget
+from hivemind.mcp_env import mcp_env
 
 load_dotenv()
 
@@ -126,16 +127,16 @@ gitlab_tools = McpToolset(
         server_params=StdioServerParameters(
             command="npx",
             args=["-y", "@zereight/mcp-gitlab"],
-            env={
-                "GITLAB_PERSONAL_ACCESS_TOKEN": os.environ["GITLAB_BOT_TOKEN"],
-                "GITLAB_API_URL": _GITLAB_API_URL,
+            env=mcp_env(
+                GITLAB_PERSONAL_ACCESS_TOKEN=os.environ["GITLAB_BOT_TOKEN"],
+                GITLAB_API_URL=_GITLAB_API_URL,
                 # Default project for every tool call so the agent never has to pass
                 # (or mis-pass) project_id — passing a bad project/path is what made
                 # get_repository_tree return "Repository or path not found".
-                "GITLAB_PROJECT_ID": _TARGET_PROJECT,
-                "USE_PIPELINE": "true",
-                "GITLAB_READ_ONLY_MODE": "false",
-            },
+                GITLAB_PROJECT_ID=_TARGET_PROJECT,
+                USE_PIPELINE="true",
+                GITLAB_READ_ONLY_MODE="false",
+            ),
         ),
         # MCP calls that hit GitLab's API (file reads, MR create) can exceed ADK's default
         # 5s request timeout. Give them headroom like Detective does.
