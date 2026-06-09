@@ -1,0 +1,62 @@
+{
+  "_note": "HiveMind hackathon demo scenarios. All three themed incidents route to the ONE real, fixable bug (payment-service/config.yaml retry.timeout_seconds 1->5) — the theme lives in the alert narrative. service is ALWAYS 'checkout': it is the only value that simultaneously lights up Dynatrace Grail (service.name=checkout), the Elastic burst, and the BigQuery customer rows. Driven via scripts/demo.py.",
+  "scenarios": [
+    {
+      "id": "worldcup",
+      "theme": "2026 World Cup",
+      "headline": "World Cup final on-sale: checkout SLO breach under fan surge",
+      "service": "checkout",
+      "severity": "sev1",
+      "title": "World Cup final ticket on-sale surge: checkout p99 latency doubled to 2x SLO after the payment-service v2.4.1 deploy — fans hitting Pay are timing out and being declined at the turnstile.",
+      "aha": "One alert during the on-sale spike — 90 seconds later HiveMind opened a merge request that fixes the exact config line and named the paying customers and revenue on the line, before an on-call human even opened a tab.",
+      "talk": [
+        "This is THE live run on stage (Vertex is per-minute throttled, so only one fresh fire).",
+        "Watch the pills: Detective(Dynatrace) -> the parallel fan-out LogDiver(Elastic) / CodeArch(GitLab) / Liaison(BigQuery) -> Scribe(Atlas) -> Reviewer(Phoenix).",
+        "When CodeArch's MR link streams in, CLICK IT: a real gitlab.com MR, timeout_seconds 1->5, authored by @HiveMind-bot — not a screenshot."
+      ]
+    },
+    {
+      "id": "finserv",
+      "theme": "Financial Services",
+      "headline": "Real-time card-payment deadline-exceeded: false declines on legitimate cardholders",
+      "service": "checkout",
+      "severity": "sev1",
+      "title": "FRAUD/PAYMENTS SEV1: real-time card-payment authorization deadline exceeded — the fraud-decision path is aborting valid transactions, false declines spiking on legitimate cardholders and eroding trust.",
+      "aha": "A 'fraud' false-decline storm turned out to be a 1-second timeout aborting legitimate payments — HiveMind quantified the trust risk by name (4 Enterprise accounts ~ $20,600/mo) and opened the fix as a reviewable MR.",
+      "talk": [
+        "Strongest theme for finance judges: a reliability bug masquerading as fraud-rejection, eroding trust.",
+        "Focus on CustomerLiaison's LIVE BigQuery output: ~7 customers on the payment path; the 4 Enterprise names CUST-011 $7,500, CUST-004 $5,800, CUST-001 $4,200, CUST-008 $3,100.",
+        "Lock the framing: '$21,646/mo at risk across the affected base' (annualized ~$259,752/yr) — pick one and stay consistent."
+      ]
+    },
+    {
+      "id": "retail",
+      "theme": "Brick-and-Mortar Retail",
+      "headline": "In-store POS tap-to-pay failing across mall tenants during a weekend campaign",
+      "service": "checkout",
+      "severity": "sev2",
+      "title": "In-store POS checkout failing across mall tenants: card terminals timing out mid-sale at tap-to-pay during the weekend tenant campaign — registers retrying and aborting valid taps, shoppers abandoning at the till.",
+      "aha": "Same one-line alert from a mall's POS network — HiveMind autonomously walked logs -> metrics -> code -> customer impact and shipped a merge request the way a senior on-call engineer would, in under two minutes.",
+      "talk": [
+        "Fired at sev2 (vs sev1) to show the severity field flowing end-to-end onto the channel + incident record.",
+        "Reinforces generalization: one engine, third industry, same converged fix.",
+        "Every run leaves a grounded postmortem in MongoDB Atlas with the MR link."
+      ]
+    }
+  ],
+  "rigor_beat": {
+    "id": "rigor",
+    "theme": "Meta / Rigor — it is real, not theater",
+    "aha": "An external evaluator grades the crew against a contract and catches it when it lies (it re-checks GitLab itself and FAILs a fabricated MR claim); and overnight the system rewrote its own review rubric and measurably got better — 6/10 to 10/10 catch rate — then promoted the winner automatically.",
+    "show": [
+      "harness/runs/<id>/feedback.json — verdict=FAIL with 'required_final.mr_filed: claimed but no MR found in GitLab'.",
+      "Atlas harness_runs: the generator->evaluator loop self-corrects (FAIL->PASS) and gives up safely (FAILx4 -> ESCALATED to a human).",
+      "Atlas flywheel_runs: Reviewer rewrote its own rubric, old 6/10 -> new 10/10, promoted via the Phoenix 'production' tag (prompt version moved v1 -> v6)."
+    ],
+    "honesty": [
+      "Narrate only the 2 dated flywheel runs (the 3rd row is a plumbing stub).",
+      "Say 'human-flagged corrections', not 'fully automatic from user thumbs' (collect_corrections is a best-effort stub).",
+      "Phoenix trace links are localhost:6006 (self-hosted) — clickable only on the demo machine."
+    ]
+  }
+}

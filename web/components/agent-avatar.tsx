@@ -3,12 +3,12 @@ import type { AgentId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
-  sm: "h-6 w-6 text-[13px] rounded",
-  md: "h-9 w-9 text-lg rounded-md",
-  lg: "h-10 w-10 text-xl rounded-md",
+  sm: { box: "h-6 w-6 rounded", icon: "h-3.5 w-3.5" },
+  md: { box: "h-9 w-9 rounded-md", icon: "h-4 w-4" },
+  lg: { box: "h-10 w-10 rounded-md", icon: "h-5 w-5" },
 } as const;
 
-/** A bot-style rounded-square avatar in the agent's partner color. */
+/** A bot-style rounded-square avatar: the agent's Lucide icon on a restrained tinted square. */
 export function AgentAvatar({
   agent,
   size = "md",
@@ -17,16 +17,18 @@ export function AgentAvatar({
   size?: keyof typeof SIZES;
 }) {
   const meta = AGENTS[agent];
+  const Icon = meta.icon;
+  const s = SIZES[size];
   return (
     <div
       title={`${meta.name} · ${meta.partner}`}
       className={cn(
-        "flex shrink-0 select-none items-center justify-center text-white shadow-sm ring-2 ring-inset",
+        "flex shrink-0 select-none items-center justify-center",
         meta.avatar,
-        SIZES[size],
+        s.box,
       )}
     >
-      <span aria-hidden>{meta.emoji}</span>
+      <Icon className={s.icon} strokeWidth={2} />
     </div>
   );
 }
