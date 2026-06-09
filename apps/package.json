@@ -1,0 +1,24 @@
+{
+  "name": "hivemind-demo-apps",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real instrumented services for HiveMind — emit real OTLP telemetry to Dynatrace so a real regression becomes a real incident (no seed scripts).",
+  "scripts": {
+    "payment": "OTEL_SERVICE_NAME=payment-service node -r ./otel.js payment-service.js",
+    "checkout": "OTEL_SERVICE_NAME=checkout-service node -r ./otel.js checkout-service.js",
+    "loadgen": "node loadgen.js"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/api-logs": "^0.57.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.55.0",
+    "@opentelemetry/exporter-logs-otlp-proto": "^0.57.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.57.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.57.0",
+    "@opentelemetry/sdk-logs": "^0.57.0",
+    "@opentelemetry/sdk-metrics": "^1.30.0",
+    "@opentelemetry/sdk-node": "^0.57.0",
+    "express": "^4.21.2",
+    "yaml": "^2.6.1"
+  }
+}

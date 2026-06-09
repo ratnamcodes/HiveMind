@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, MessageSquare } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, MessageSquare, UserRound } from "lucide-react";
 import { AGENTS } from "@/lib/agents";
 import { formatTime } from "@/lib/format";
 import type { Message, MessageLink } from "@/lib/types";
@@ -18,6 +18,22 @@ export function MessageItem({
 }) {
   if (message.author.type === "system") {
     return <SystemMessage message={message} />;
+  }
+
+  if (message.reasoning && message.author.type === "agent") {
+    const m = AGENTS[message.author.agent];
+    const Icon = m.icon;
+    return (
+      <div className="flex items-baseline gap-2 px-4 py-0.5 text-xs leading-relaxed text-muted-foreground">
+        <span className="flex w-9 shrink-0 justify-end pt-0.5 opacity-60">
+          <Icon className="h-3 w-3" strokeWidth={2} />
+        </span>
+        <span className="italic">
+          <span className={cn("font-medium not-italic", m.nameColor)}>{m.name}</span>{" "}
+          {message.text}
+        </span>
+      </div>
+    );
   }
 
   const isAgent = message.author.type === "agent";
@@ -97,19 +113,40 @@ function LinkChip({ link }: { link: MessageLink }) {
   );
 }
 
+function stripLeadingEmoji(t: string): string {
+  return t.replace(/^[\p{Extended_Pictographic}☀-➿️\s]+/u, "").trim();
+}
+
 function SystemMessage({ message }: { message: Message }) {
-  const isAlert = message.text.startsWith("🚨");
+  const raw = message.text;
+  const text = stripLeadingEmoji(raw);
+  const isAlert = raw.startsWith("🚨") || /dynatrace alert|incident opened/i.test(text);
+  const isResolved = raw.startsWith("✅") || /incident (resolved|escalated)/i.test(text);
+  const isDecision = raw.startsWith("👤") || /human decision/i.test(text);
+
   if (isAlert) {
     return (
-      <div className="mx-4 my-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-2.5 text-sm leading-relaxed text-orange-200">
-        {message.text}
+      <div className="mx-4 my-2 flex items-start gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3.5 py-2.5 text-sm leading-relaxed text-orange-200">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+        <span>{text}</span>
+      </div>
+    );
+  }
+  if (isResolved) {
+    return (
+      <div className="mx-4 my-2 flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-sm leading-relaxed text-emerald-200">
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+        <span>{text}</span>
       </div>
     );
   }
   return (
     <div className="flex items-center gap-3 px-4 py-2">
       <span className="h-px flex-1 bg-border" />
-      <span className="text-center text-xs text-muted-foreground">{message.text}</span>
+      <span className="inline-flex items-center gap-1.5 text-center text-xs text-muted-foreground">
+        {isDecision && <UserRound className="h-3 w-3 shrink-0" strokeWidth={2} />}
+        {text}
+      </span>
       <span className="h-px flex-1 bg-border" />
     </div>
   );

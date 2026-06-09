@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckCircle2, Hash } from "lucide-react";
+import { CheckCircle2, Hash, Hexagon } from "lucide-react";
 import { useWarRoom } from "@/lib/store";
 import { SEVERITY } from "@/lib/severity";
 import type { Channel } from "@/lib/types";
@@ -24,8 +24,8 @@ export function ChannelSidebar() {
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       <header className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-base shadow-sm">
-          🐝
+        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-foreground text-background">
+          <Hexagon className="h-4 w-4" strokeWidth={2.5} fill="currentColor" />
         </div>
         <div className="leading-tight">
           <div className="text-sm font-bold tracking-tight">HiveMind</div>

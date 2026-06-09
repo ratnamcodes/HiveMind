@@ -8,6 +8,9 @@ import { SEVERITY } from "@/lib/severity";
 import { cn } from "@/lib/utils";
 import { MessageList } from "./message-list";
 import { Composer } from "./composer";
+import { BriefCard } from "./brief-card";
+import { ApprovalCard } from "./approval-card";
+import { LiveActivity } from "./live-activity";
 
 export function ChannelView() {
   const params = useParams<{ channel_id: string }>();
@@ -58,7 +61,10 @@ export function ChannelView() {
         )}
       </header>
 
+      <BriefCard channelId={channelId} />
       <MessageList channelId={channelId} />
+      <LiveActivity channelId={channelId} />
+      <ApprovalCard channelId={channelId} />
       <Composer channelId={channelId} channelName={channel?.name ?? channelId} />
     </div>
   );

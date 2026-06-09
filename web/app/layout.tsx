@@ -1,42 +1,24 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ChannelSidebar } from "@/components/channel-sidebar";
-import { EventStream } from "@/components/event-stream";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HiveMind · War Room",
-  description: "Multi-agent incident response — war room",
+  title: "HiveMind — AI SRE that fixes incidents in your real telemetry",
+  description:
+    "HiveMind watches your Dynatrace telemetry, finds the root cause in real production data, opens the GitLab fix, and proves your service recovered — with a human approving every change.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark`}
       suppressHydrationWarning
     >
-      <body className="h-screen overflow-hidden antialiased">
-        <EventStream />
-        <div className="flex h-full">
-          <ChannelSidebar />
-          <main className="flex min-w-0 flex-1">{children}</main>
-        </div>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

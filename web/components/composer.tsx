@@ -5,6 +5,7 @@ import { SendHorizontal } from "lucide-react";
 import { AGENT_IDS, AGENTS, type AgentMeta } from "@/lib/agents";
 import { useWarRoom } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { AgentAvatar } from "./agent-avatar";
 
 export function Composer({
   channelId,
@@ -118,7 +119,7 @@ export function Composer({
                 i === active ? "bg-accent" : "hover:bg-accent/50",
               )}
             >
-              <span className="text-base">{a.emoji}</span>
+              <AgentAvatar agent={a.id} size="sm" />
               <span className="font-medium text-foreground">{a.name}</span>
               <span className="ml-auto text-xs text-muted-foreground">
                 {a.partner}

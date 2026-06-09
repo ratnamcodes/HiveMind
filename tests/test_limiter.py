@@ -32,10 +32,20 @@ async def _flush_rate_limit_keys():
 
 @pytest.fixture
 def _stub_graph(monkeypatch):
-    async def fake_ainvoke(state):
-        return {"input": state.get("input", ""), "output": "stubbed"}
+    # /chat now drives a FULL incident via orchestrator_runner.run (not the old
+    # graph_app.ainvoke). Stub that entry point so the rate-limit test stays fast and
+    # deterministic — no Gemini, no partner calls, no real MR.
+    from orchestrator.graph import OrchestratorOutput
 
-    monkeypatch.setattr(app_module.graph_app, "ainvoke", fake_ainvoke)
+    async def fake_run(payload):
+        return OrchestratorOutput(
+            incident_id="stub",
+            status="resolved",
+            output={"stubbed": True},
+            trace_id="stub-trace",
+        )
+
+    monkeypatch.setattr(app_module.orchestrator_runner, "run", fake_run)
 
 
 @pytest.fixture

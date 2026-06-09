@@ -27,12 +27,14 @@ ALIAS = "hivemind-deploys"
 
 now = datetime.now(timezone.utc)
 
-# One current deployment per service. checkout & payments shipped most recently
-# (minutes ago) -> prime suspects when their error rate spikes.
+# One current deployment per service. payment-service shipped most recently
+# (minutes ago) -> prime suspect when its error rate spikes. This row matches the
+# Dynatrace seed exactly (v2.4.1 / commit a1b2c3d) so the incident_log_triage
+# LOOKUP JOIN blames the SAME release Detective implicates from Dynatrace.
 # (service, version, commit_sha, deployed_at, environment, deployed_by, summary)
 DEPLOYS = [
-    ("checkout",      "v2.8.0",  "a1b9f3c", now - timedelta(minutes=18), "prod",    "rivera", "swap checkout-db connection pool to pgbouncer"),
-    ("payments",      "v4.2.1",  "7d2e004", now - timedelta(minutes=42), "prod",    "okoro",  "add retry budget for payment gateway calls"),
+    ("payment-service", "v2.4.1", "a1b2c3d", now - timedelta(minutes=22), "prod", "okoro",  "set retry.timeout_seconds=1 in payment-service/config.yaml (too low — aborts valid calls under load)"),
+    ("checkout",        "v2.8.0", "a1b9f3c", now - timedelta(hours=4),    "prod", "rivera", "add structured request logging"),
     ("cart",          "v1.15.3", "c4419aa", now - timedelta(hours=9),    "prod",    "singh",  "bump cart TTL to 72h"),
     ("inventory",     "v3.0.7",  "e88b120", now - timedelta(hours=26),   "prod",    "chen",   "stock reservation hotfix"),
     ("auth-service",  "v5.1.0",  "0fa7731", now - timedelta(days=2),     "prod",    "rivera", "rotate JWT signing keys"),

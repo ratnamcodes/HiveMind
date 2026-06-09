@@ -17,7 +17,7 @@ export type Severity = "sev1" | "sev2" | "sev3";
 export type ChannelKind = "ops" | "incident";
 
 /** State of an agent's work, shown as a small pill to the right of its message. */
-export type PillState = "thinking" | "tool_call" | "done";
+export type PillState = "thinking" | "tool_call" | "done" | "awaiting_human";
 
 export interface StatusPill {
   state: PillState;
@@ -61,6 +61,8 @@ export interface Message {
   ts: string;
   /** Present on agent messages to show thinking / tool_call / done. */
   pill?: StatusPill;
+  /** A one-line "why I'm doing this" the agent narrates before its work (rendered muted/italic). */
+  reasoning?: boolean;
   /** Agents @-mentioned in the body, for highlight. */
   mentions?: AgentId[];
   /** If this message anchors a thread. */
@@ -75,6 +77,21 @@ export interface Thread {
   channelId: string;
   rootMessageId: string;
   messages: Message[];
+}
+
+/** The pinned Incident Commander brief — the 5-second "what / impact / who" a newcomer reads. */
+export interface Brief {
+  headline: string;
+  what: string;
+  severity: Severity;
+  suspected?: string;
+  team?: string[];
+  /** Updated once Liaison reports: a formatted business-impact line. */
+  impact?: string;
+  customersAffected?: number;
+  revenueAtRisk?: number;
+  segments?: string[];
+  actionsTaken?: string[];
 }
 
 /** Live events pushed over the /ws WebSocket (must match hivemind/events.py). */
@@ -99,4 +116,50 @@ export type WarRoomEvent =
       channel_id: string;
       message_id: string;
       payload: Record<string, unknown>;
+    }
+  | {
+      type: "brief";
+      channel_id: string;
+      headline: string;
+      what: string;
+      severity: Severity;
+      suspected?: string;
+      team?: string[];
+    }
+  | {
+      type: "reasoning";
+      channel_id: string;
+      agent_id: string;
+      text: string;
+    }
+  | {
+      type: "impact";
+      channel_id: string;
+      customers_affected?: number;
+      revenue_at_risk_usd?: number;
+      segments?: string[];
+      actions_taken?: string[];
+      summary?: string;
+    }
+  | ({ type: "decision_request"; channel_id: string } & DecisionRequest)
+  | {
+      type: "decision_made";
+      channel_id: string;
+      decision_id: string;
+      choice: string;
+      detail?: string;
     };
+
+/** An approval card: the run paused and needs a human to choose. */
+export interface DecisionRequest {
+  decision_id: string;
+  incident_id: string;
+  kind: string;
+  title: string;
+  prompt?: string;
+  mr_url?: string;
+  suspect_files?: string[];
+  impact?: string;
+  actions_taken?: string[];
+  options: { id: string; label: string; style?: string }[];
+}

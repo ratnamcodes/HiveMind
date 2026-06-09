@@ -1,0 +1,4 @@
+# Runtime config for payment-service — mirrors the GitLab repo file CodeArch fixes.
+# downstream_delay_ms: 0 is healthy. scripts/inject_regression.sh flips it to 1200 (a real
+# latency regression). The fix MR sets it back to 0; recovery re-syncs it here.
+downstream_delay_ms: 0

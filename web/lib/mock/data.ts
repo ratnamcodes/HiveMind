@@ -16,6 +16,9 @@ let _seq = 1000;
 const nextId = (prefix: string): string => `${prefix}-${++_seq}`;
 
 // --- channels --------------------------------------------------------------
+// A clean team workspace: a control-plane channel + ordinary team channels. There are NO
+// pre-seeded incidents — the only incident channel that ever appears is a REAL one, materialized
+// live over /ws when HiveMind is paged. (Keeps the demo honest: nothing is staged in the sidebar.)
 const channels: Channel[] = [
   {
     id: "ops",
@@ -25,22 +28,18 @@ const channels: Channel[] = [
     topic: "HiveMind control plane — 6 agents standing by",
   },
   {
-    id: "inc-checkout-latency",
-    name: "inc-checkout-latency",
-    kind: "incident",
-    severity: "sev2",
-    unread: 3,
-    isNew: true,
-    topic: "Checkout p99 latency 2× after the 14:05 payment-service deploy",
+    id: "deploys",
+    name: "deploys",
+    kind: "ops",
+    unread: 0,
+    topic: "Release + deploy notifications",
   },
   {
-    id: "inc-cache-stampede",
-    name: "inc-cache-stampede",
-    kind: "incident",
-    severity: "sev3",
+    id: "general",
+    name: "general",
+    kind: "ops",
     unread: 0,
-    resolved: true,
-    topic: "Cache stampede on product-service — mitigated",
+    topic: "Engineering team",
   },
 ];
 
@@ -68,7 +67,7 @@ const messages: Record<string, Message[]> = {
       id: "m-ops-3",
       channelId: "ops",
       author: { type: "system" },
-      text: "🚨 New incident channel created: #inc-checkout-latency (sev2)",
+      text: "New incident channel created: #inc-checkout-latency (sev2)",
       ts: ago(32),
     },
   ],
@@ -77,7 +76,7 @@ const messages: Record<string, Message[]> = {
       id: "m-inc-1",
       channelId: "inc-checkout-latency",
       author: { type: "system" },
-      text: "🚨 Incident opened — Checkout p99 latency doubled to 1.8s starting 14:32; error rate normal. Suspected trigger: the 14:05 payment-service deploy.",
+      text: "Incident opened — Checkout p99 latency doubled to 1.8s starting 14:32; error rate normal. Suspected trigger: the 14:05 payment-service deploy.",
       ts: ago(32),
     },
     {
@@ -155,7 +154,7 @@ const messages: Record<string, Message[]> = {
       id: "m-inc-9",
       channelId: "inc-checkout-latency",
       author: { type: "agent", agent: "reviewer" },
-      text: "Verdict: approve ✅ — the hypothesis is grounded in Dynatrace logs and the MR addresses the root cause directly. Full trace attached.",
+      text: "Verdict: approve — the hypothesis is grounded in Dynatrace logs and the MR addresses the root cause directly. Full trace attached.",
       ts: ago(23),
       pill: { state: "done" },
       links: [

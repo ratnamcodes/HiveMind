@@ -1,3 +1,12 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Search,
+  Waves,
+  GitPullRequest,
+  Megaphone,
+  ClipboardList,
+  ShieldCheck,
+} from "lucide-react";
 import type { AgentId } from "./types";
 
 export interface AgentMeta {
@@ -6,75 +15,75 @@ export interface AgentMeta {
   name: string;
   /** The partner platform this agent drives. */
   partner: string;
-  emoji: string;
+  /** Lucide icon for the agent (no emojis — reads as a real tool). */
+  icon: LucideIcon;
   /** Two-letter fallback initials. */
   initials: string;
   /**
-   * Tailwind classes for the avatar (background + ring). Written as full literal
-   * strings so the Tailwind v4 scanner includes them — never build these
-   * dynamically or they'll be purged.
+   * Tailwind classes for the avatar square (tinted bg + hairline border + icon color).
+   * Full literal strings so the Tailwind v4 scanner keeps them — never build dynamically.
    */
   avatar: string;
-  /** Tailwind text color for the agent's name. */
+  /** Tailwind text color for the agent's name (muted, restrained — no indigo/purple). */
   nameColor: string;
 }
 
-// 6 agents → 6 partner colors, exactly as the spec maps them:
-// emerald=mongo, teal=elastic, indigo=dynatrace, orange=gitlab, blue=fivetran, purple=arize.
+// 6 specialists, each a Lucide icon on a restrained tinted square. Tones are muted and
+// functional, not decorative — a calm dev-tool palette, not a rainbow.
 export const AGENTS: Record<AgentId, AgentMeta> = {
   detective: {
     id: "detective",
     name: "Detective",
     partner: "Dynatrace",
-    emoji: "🕵️",
+    icon: Search,
     initials: "DT",
-    avatar: "bg-indigo-500 ring-indigo-400/40",
-    nameColor: "text-indigo-300",
+    avatar: "border border-sky-400/25 bg-sky-400/10 text-sky-300",
+    nameColor: "text-sky-300",
   },
   log_diver: {
     id: "log_diver",
     name: "LogDiver",
     partner: "Elastic",
-    emoji: "🌊",
+    icon: Waves,
     initials: "LD",
-    avatar: "bg-teal-500 ring-teal-400/40",
+    avatar: "border border-teal-400/25 bg-teal-400/10 text-teal-300",
     nameColor: "text-teal-300",
   },
   code_arch: {
     id: "code_arch",
     name: "CodeArch",
     partner: "GitLab",
-    emoji: "🔧",
+    icon: GitPullRequest,
     initials: "CA",
-    avatar: "bg-orange-500 ring-orange-400/40",
-    nameColor: "text-orange-300",
+    avatar: "border border-amber-400/25 bg-amber-400/10 text-amber-300",
+    nameColor: "text-amber-300",
   },
   customer_liaison: {
     id: "customer_liaison",
     name: "Liaison",
     partner: "Fivetran",
-    emoji: "📣",
+    icon: Megaphone,
     initials: "CL",
-    avatar: "bg-blue-500 ring-blue-400/40",
+    avatar: "border border-blue-400/25 bg-blue-400/10 text-blue-300",
     nameColor: "text-blue-300",
   },
   scribe: {
     id: "scribe",
     name: "Scribe",
     partner: "MongoDB Atlas",
-    emoji: "📝",
+    icon: ClipboardList,
     initials: "SC",
-    avatar: "bg-emerald-500 ring-emerald-400/40",
+    avatar: "border border-emerald-400/25 bg-emerald-400/10 text-emerald-300",
     nameColor: "text-emerald-300",
   },
   reviewer: {
     id: "reviewer",
     name: "Reviewer",
-    partner: "Arize",
-    emoji: "⚖️",
+    partner: "Dynatrace SRG",
+    icon: ShieldCheck,
     initials: "RV",
-    avatar: "bg-purple-500 ring-purple-400/40",
-    nameColor: "text-purple-300",
+    avatar: "border border-zinc-400/25 bg-zinc-400/10 text-zinc-300",
+    nameColor: "text-zinc-300",
   },
 };
 

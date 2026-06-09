@@ -1,0 +1,335 @@
+{
+  "thesis": "A solo coding agent like Claude Code or Codex is a brilliant individual worker locked inside one code repository's sandbox: it only acts when a human tells it to, it has no live reach into the company's production systems, and it has no idea which real customers or dollars a bug is touching. HiveMind is the opposite: a steerable crew of separately-credentialed AI specialists that notices a business problem nobody filed a ticket for (sales just dropped, no error was thrown), then fans out across six real partner systems at once -- Dynatrace, Elastic, GitLab, BigQuery/Fivetran, MongoDB Atlas, Phoenix -- to assemble the whole story a single agent never could: the code bug AND the bad deploy that caused it AND the named paying customers bleeding revenue AND the privacy data that must be scrubbed before any public fix. Crucially it then STOPS and lets a human steer each high-stakes move from a Slack-style war-room, and a separate evaluator process independently re-checks GitLab to prove the fix is real and not a demo trick. The one-line wow your mom gets: \"No human noticed the bug -- the AI crew did, found it was costing $21,600 a month and hurting three named customers, hid their private data, drafted the fix as a pull request, and asked a person before shipping. The coding bot on your laptop would never have known to look.\"",
+  "agent_roster": [
+    {
+      "name": "Commander",
+      "role": "Incident Commander + narrator. Writes the pinned plain-English BRIEF card the instant the channel opens (what/impact/severity/who), narrates handoffs ('Detective handed off to LogDiver'), and adjudicates the one staged disagreement or escalates it to the human. Decides and communicates; does NOT fix.",
+      "partner": "None (template/state-driven; reads OrchestratorState and emits system-authored events). At most one cheap Gemini-Flash call.",
+      "status": "new",
+      "why": "Directly fixes the #1 user critique ('a channel materializes and you don't know what it's about'). The n=234 'Watching AI Think' study measured that a no-narration flow is rated 'unengaging, minimal effort' -- literally the user's complaint. It maps to the real ICS Incident-Commander role. Built as a thin non-LLM narrator so it costs ~zero against the Vertex per-minute throttle."
+    },
+    {
+      "name": "Detective",
+      "role": "Lead diagnostician. NL->DQL->Davis->notebook against Dynatrace Grail; emits the root-cause hypothesis + a confidence score (already in InvestigationFinding.confidence) the UI surfaces as calibrated language.",
+      "partner": "Dynatrace (Grail logs)",
+      "status": "existing",
+      "why": "Already the fan-out gate (implicated_service drives route_after_detective). Unchanged role; per-scenario Grail seed makes it find a different root cause each time."
+    },
+    {
+      "name": "LogDiver",
+      "role": "Log forensics. ES|QL over ~5k logs with a LOOKUP JOIN on the deploy registry to blame a specific deploy. Creates the disagreement moment in Scenario 4.",
+      "partner": "Elastic",
+      "status": "existing",
+      "why": "Unchanged code. Per-scenario DEPLOYS rows in seed_elastic_deploys.py make it blame a DIFFERENT deploy (ticketing v3.1, fraud-rules, inventory-sync, pos-gateway) instead of always payment-service v2.4.1 -- this is half the gimmick fix."
+    },
+    {
+      "name": "CodeArch",
+      "role": "Ops Lead. Reads the real repo tree, drafts a minimal patch, opens a REAL merge request as @HiveMind-bot. The action behind the mandatory human approval gate. Gains a 'revert MR' mode for the rollback-vs-patch fork.",
+      "partner": "GitLab",
+      "status": "expanded",
+      "why": "Mechanism unchanged and grounded by fetch_repo_tree(). We push 5 new real files into the tiny repo so its MR is genuinely different per scenario -- the other half of the gimmick fix. Adding a revert-MR mode (reuses create_branch/create_or_update_file) enables the rollback-vs-patch human decision."
+    },
+    {
+      "name": "CustomerLiaison",
+      "role": "The headline differentiator. Names affected customers + revenue from live BigQuery, AND fires the right Fivetran depth play per scenario: A) provision a connector, B) run a transformation, C) GDPR column-level PII redaction. Also lends its BigQuery client to two personas (DataAnalyst for the retail mystery, Compliance for the PII gate) to feel like a bigger team without new serial LLM nodes.",
+      "partner": "Fivetran -> live BigQuery",
+      "status": "expanded",
+      "why": "All three depth plays already exist and are verified (test_liaison_create/transform/redact GREEN) but customer_liaison_node passes an EMPTY context, so they never fire. One line per scenario -- set req.context -- activates them. This is the white space every AI-SRE incumbent admits ('which customers are affected cannot be solved with logs and metrics alone') and NO competitor does data-side GDPR remediation."
+    },
+    {
+      "name": "Scribe",
+      "role": "Scribe + memory. Writes the postmortem to Atlas AND vector-recalls past incidents ('have we seen this before?') at the START of a run.",
+      "partner": "MongoDB Atlas (Voyage autoEmbed)",
+      "status": "expanded",
+      "why": "ColdMemory.recall and related_to already exist (autoEmbed on summary) but are UNUSED on the live path. Wiring recall in surfaces the incident.io signature 'we've seen this before' wow (Scenario 3 remembers a prior region-sync typo) -- a compounding-memory beat a solo agent structurally cannot show."
+    },
+    {
+      "name": "Reviewer",
+      "role": "Critic / QA authority. approve/revise/escalate with a self-rewriting rubric (flywheel). Gates the whole incident; pairs with the external Evaluator as the verification authority on screen.",
+      "partner": "Phoenix",
+      "status": "existing",
+      "why": "Unchanged. Already gates every incident in reviewer_node and can revise to any specialist. Its escalation path becomes a war-room card; the external Evaluator's GitLab re-check becomes the on-screen anti-Devin pill."
+    }
+  ],
+  "human_in_loop_protocol": "TODAY there is no human-in-the-loop: run_full runs the LangGraph to END then fires events.complete(), and store.ts line 225 (`if (get().liveChannels[channelId]) return;`) makes composer @mentions die locally with no backend path. We build the round-trip on machinery that already exists -- OrchestratorRunner already uses AsyncRedisSaver keyed by thread_id, and LangGraph's interrupt() + Command(resume=...) persists to exactly that checkpointer.\n\nMECHANISM (small lift): (1) a node calls interrupt({intent payload}); LangGraph snapshots state to Redis and the graph STOPS. (2) Just before interrupting, the node emits a new `decision_request` event over the existing bus (new builder in hivemind/events.py next to status/token/complete) that the war-room renders as an inline approval card. (3) The human clicks a button (or types an @mention answer); the frontend hits a NEW endpoint POST /api/incident/{id}/resume with {decision, edits?, feedback?}. (4) That endpoint calls graph.ainvoke(Command(resume=decision), config={thread_id: incident_id}), resuming from the checkpoint. The existing AGENT_TIMEOUT/shield() machinery already tolerates long pauses. The four canonical LangGraph decisions -- approve / edit / reject-with-feedback / respond -- map 1:1 to the buttons.\n\nTHREE MANDATORY PAUSE POINTS (the canonical irreversible / high-blast-radius / novel triggers): (P1) Before CodeArch's MR is opened -> an Intent-Preview card showing the exact one-file diff, the path, the rationale, the confidence, AND the customer/revenue impact Liaison already computed. Buttons: [Approve & open MR] [Edit the fix] [Roll back instead] [Handle it myself]. (P2) Before a Fivetran GDPR PII redaction -> a Compliance card: 'This decline-log export contains customer_id/email (PII). Redact before the public MR? GDPR exposure if not.' Buttons: [Redact & continue] [Skip] [Show columns]. This is the my-mom-says-wow, solo-agent-can't moment. (P3) At the rollback-vs-patch fork (Scenario 4) -> a Decision card with both options costed live by CustomerLiaison ($X/min bleeding). Buttons: [Roll back now] [Patch forward] [Do both].\n\nTWO NON-BLOCKING STEER POINTS: (S1) @mention an agent to dig deeper ('@log_diver check the 14:05 deploy too') -> delivered as Command(resume={human_message}) into that agent's next run; this is incident.io's conversational steering, table stakes everyone has and we don't. (S2) Answer a low-confidence agent's question (also how the staged disagreement reaches the human).\n\nHOW IT FEELS: pills stream live as today. When the graph hits an interrupt, the agent's pill flips to a distinct new state `awaiting_human` with a soft pulse ('paused for you') -- not a spinner, an invitation -- and an approval card appears inline; NOTHING irreversible has happened. The human clicks; an audit line appears ('MR opened -- revert available 15 min' / 'PII redacted: customer_id hashed'); the pill returns to thinking and the graph resumes from the checkpoint. The escalation path (finalize_node escalated=true after N tries) surfaces as its own card: 'Crew tried 3 times and isn't confident -- here's what it found. [Take over] [Send back with a hint].' This is the 'window then door' pattern: observe through a window, open the door only when a decision is genuinely needed.",
+  "ui_changes": [
+    {
+      "area": "Pinned BRIEF card (top of every incident channel)",
+      "change": "On channel creation, before any agent runs, the Commander emits a new `brief` event rendered as a sticky card above message-list.tsx. Template: '#inc-260608-payment-declines - SEV-1 - INVESTIGATING / What: card payments declined for legitimate customers since 02:14 UTC / Impact: ~5% of auths failing - 4 Enterprise accounts - ~$21,600/mo at risk / Suspected: payment-service v2.4.1 deploy / On the case: Detective, LogDiver, CodeArch, Liaison, Reviewer.' The channel name itself encodes date+system+symptom. New Channel fields (brief, impactSummary, customersAffected) in lib/types.ts.",
+      "why_third_person": "Directly answers the user's 'a channel materializes and you don't know what it's about.' This is the 5-second incident-commander brief; many stakeholders read ONLY this line. Today the channel opens with a raw single token, which is the exact failure mode."
+    },
+    {
+      "area": "Live agent REASONING under each bubble",
+      "change": "Today _stream_summary streams only each agent's final conclusion. Add a one-line 'why I'm doing this' streamed BEFORE the result, and render the existing tool_call status pills with the real tool name (already passed: events.status(..., tool=call.name)) plus a new short tool_result string, in a collapsible Agent-Trace thread. Example surfaced: 'execute_dql -> 412 timeouts on /checkout; incident_log_triage -> blames payment-service v2.4.1.' Expertise-supportive voice.",
+      "why_third_person": "The n=234 study: visible expertise-supportive reasoning raised Understanding & Trust 71.6 vs 61.7; the no-reasoning control was rated 'unengaging, minimal effort' -- the user's literal complaint. Showing real tool names is Codex's 'receipts/citations, not prose' trust pattern. The measured fix for fire-and-forget."
+    },
+    {
+      "area": "Impact / Decision / Verification right rail (new impact-panel.tsx)",
+      "change": "A persistent right panel with three stacked sections fed by intermediate customer_report + the complete payload: IMPACT (named customers e.g. CUST-011 $7,500, revenue at risk, segments), DECISION (the active approval card with diff + buttons when paused), VERIFICATION (the external Evaluator pill: 'Verifying MR exists... confirmed by an independent process'). Calibrated-confidence language throughout ('potential avenue' vs 'root cause confirmed').",
+      "why_third_person": "Keeps the CustomerLiaison revenue wow (the differentiator no incumbent shows) permanently visible instead of buried in the stream. The Evaluator pill is the anti-Devin trust moment -- harness/evaluator.py's _fetch_mr already re-checks GitLab and FAILs a fabricated MR; putting it on screen is the cherry-pick defense Devin lacked."
+    },
+    {
+      "area": "Timeline strip + before/after delta (new timeline.tsx)",
+      "change": "A thin horizontal timeline across the channel header of timestamped beats: 02:14 alert -> 02:15 cause found -> 02:17 fix drafted -> [paused for human] -> 02:19 MR opened, verified. Every scenario video ends on the delta.",
+      "why_third_person": "The single most legible non-expert wow is a before/after time number (incident.io's own SREcon talk is titled 'From 4 Hours to 8 Minutes'). It makes the whole arc a story a newcomer reads in one glance, and shows WHERE the human steered."
+    },
+    {
+      "area": "Approval cards inline + new awaiting_human pill state (new approval-card.tsx)",
+      "change": "Render the decision_request event as an inline card (diff on top, impact line, buttons below) whose buttons POST to /api/incident/{id}/resume. Add a new PillState 'awaiting_human' (pulsing 'paused for you'). Wire composer.tsx @mention and these buttons through a new store action respondToAgent(incidentId, decision) instead of the local-only early-return at store.ts line 225.",
+      "why_third_person": "Makes the run VISIBLY defer to a human -- which is itself the wow ('the AI did all the work then asked a person'). The pulsing pill tells a third person the crew is waiting on them, not hung."
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "S1",
+      "title": "World Cup: the $0 ticket-revenue glitch under fan surge",
+      "domain": "2026 World Cup",
+      "business_symptom": "Toronto group-stage on-sale: 312 confirmed orders in the last 8 minutes, total recognized revenue $0.00. Finance sees $0-revenue CONFIRMED orders -- the orders succeeded, no exception was thrown.",
+      "why_impossible_for_solo_coding_agent": "Nothing errored, so a reactive sandboxed coding agent never knows to look. The symptom lives in BigQuery (revenue), the cause in an Elastic deploy event stream, the fix in a GitLab config file, and 'which hospitality accounts got free tickets' in the customer table -- four live systems correlated in parallel under a clock, none reachable from a repo sandbox.",
+      "agents_and_actions": [
+        {
+          "agent": "Detective",
+          "action": "Grail: finds the entitlement-grant path returning HTTP 200 with price_applied=0 post-deploy",
+          "system": "Dynatrace"
+        },
+        {
+          "agent": "LogDiver",
+          "action": "ES|QL: blames the ticketing-service v3.1.0 deploy (its own seeded deploy-registry row) that introduced a bad tier mapping",
+          "system": "Elastic"
+        },
+        {
+          "agent": "CodeArch",
+          "action": "Reads ticketing-service/pricing-rules.yaml, finds group_stage_toronto.price: 0 (planted, inline '# TODO verify -- comp tier?'), opens a real MR restoring the tier price + a min_price_usd guard",
+          "system": "GitLab"
+        },
+        {
+          "agent": "CustomerLiaison",
+          "action": "BigQuery: '312 orders, ~$46,800 recognized revenue mispriced to $0; 2 hospitality accounts affected' (no depth play -- context empty)",
+          "system": "BigQuery"
+        },
+        {
+          "agent": "Scribe",
+          "action": "Writes the postmortem to Atlas",
+          "system": "MongoDB Atlas"
+        },
+        {
+          "agent": "Reviewer",
+          "action": "Approves; external Evaluator independently confirms the MR exists in GitLab",
+          "system": "Phoenix + GitLab"
+        }
+      ],
+      "real_code_change": "ticketing-service/pricing-rules.yaml (NEW file pushed to the repo): restore group_stage_toronto.price from 0 to the correct tier value and add a min_price_usd guard. A genuinely different file/diff from every other scenario.",
+      "human_decision_points": [
+        "P1: approve the price-correction MR (or edit the price value)",
+        "Business call surfaced by Commander: honor or claw back the 60-312 already-confirmed $0 tickets -- [Honor as goodwill] [Void] [Escalate to Finance]"
+      ],
+      "aha_line": "One alert during the on-sale spike -- 90 seconds later the crew found a pricing deploy was giving away World Cup tickets for free, named the $46,800 on the line, and drafted the fix, then asked a human whether to honor the freebies.",
+      "mom_test": "The website was accidentally selling World Cup tickets for $0 and no alarm went off -- the sales just went through. The AI crew noticed the money wasn't coming in, found the typo in the code, and asked a person before fixing it and deciding what to do about the lucky fans.",
+      "data_to_seed": "Dynatrace Grail: ticketing/entitlement logs with price_applied=0 post-deploy. Elastic DEPLOYS row: ticketing-service v3.1.0 most-recent. BigQuery: add a small ticket_orders slice (or reuse customer_usage with services_used including 'ticketing') showing $0 Toronto orders. GitLab: push ticketing-service/pricing-rules.yaml with the planted price:0 bug."
+    },
+    {
+      "id": "S2",
+      "title": "Financial Services: false-decline storm after a fraud-rule deploy (the flagship + GDPR depth play)",
+      "domain": "Financial Services",
+      "business_symptom": "Card-auth approval rate dropped 4 points overnight; decline volume up 38%; 3 enterprise customers escalated. Engineers see 'fraud rule deployed, working' -- every declined transaction returned a clean HTTP 200, so NO log shows an error.",
+      "why_impossible_for_solo_coding_agent": "There is no exception anywhere -- declines are 'successful' responses. The only way to see it is correlating the decline-rate metric (BigQuery) + the fraud-rule deploy (Elastic) + the rule file (GitLab) + which PAYING customers got falsely declined (BigQuery) -- and the decline-log export contains PII that legally must be redacted before a public MR. A repo-bound agent has none of that reach and would never know to look. Anchored to real economics: false declines cost merchants ~$443B/yr vs ~$32B to fraud (~13x); 47% of merchants say false declines cost them sales (PYMNTS 2026).",
+      "agents_and_actions": [
+        {
+          "agent": "Detective",
+          "action": "Grail: decline logs spiked right after the deploy; reason code = velocity-rule trip",
+          "system": "Dynatrace"
+        },
+        {
+          "agent": "LogDiver",
+          "action": "ES|QL: blames the fraud-rules deploy -- velocity threshold cut from 5 to 2 txn/min",
+          "system": "Elastic"
+        },
+        {
+          "agent": "CustomerLiaison (impact)",
+          "action": "BigQuery: names the 4 Enterprise accounts falsely declined -- CUST-011 $7,500, CUST-004 $5,800, CUST-001 $4,200, CUST-008 $3,100 = $20,600/mo at risk (real rows from seed_customer_usage.csv)",
+          "system": "BigQuery"
+        },
+        {
+          "agent": "CustomerLiaison (Compliance persona, depth play C)",
+          "action": "context set -> Fivetran modify_connection_column_config hashes customer_id/email in the decline-log export BEFORE the public MR diff references it",
+          "system": "Fivetran"
+        },
+        {
+          "agent": "CodeArch",
+          "action": "Reads fraud-rules/velocity.yaml, opens a real MR loosening max_txn_per_min back from 2 to 5 + a whitelist_enterprise carve-out",
+          "system": "GitLab"
+        },
+        {
+          "agent": "Reviewer",
+          "action": "Approves the risk trade-off; Evaluator re-checks the MR in GitLab",
+          "system": "Phoenix + GitLab"
+        }
+      ],
+      "real_code_change": "fraud-rules/velocity.yaml (NEW file pushed to the repo): max_txn_per_min: 2 (planted '# tightened for WC surge') -> CodeArch raises to 5 and adds whitelist_enterprise: true. Plus the live Fivetran PII redaction (the depth play, finally on screen).",
+      "human_decision_points": [
+        "P2 (marquee): approve the GDPR redaction -- 'hash customer_id/email in the decline export before the MR goes public?' [Redact & continue]",
+        "P1 framed as a RISK decision: 'loosen velocity 2 -> 5? recovers ~$20,600/mo but slightly raises fraud exposure' [Approve] [Edit to 4] [Reject]"
+      ],
+      "aha_line": "A 'fraud' decline storm was actually the fraud filter strangling real paying customers -- the crew named the 4 Enterprise accounts and the $20,600/mo, scrubbed their card data out of the export, and let a human make the fraud-vs-revenue trade-off.",
+      "mom_test": "The bank's anti-fraud setting got too strict and started blocking real customers' cards. The AI crew worked out exactly which big customers and how much money was walking away, deleted their private card details from the report so they couldn't leak, and asked a human to decide how much to loosen it.",
+      "data_to_seed": "Dynatrace Grail: fraud-decision-path decline logs (reason=velocity) post-deploy. Elastic DEPLOYS row: fraud-rules deploy most-recent. BigQuery: reuse customer_usage payment-service path (CUST-011/004/001/008 already Enterprise). Fivetran: the existing connector for depth play C. GitLab: push fraud-rules/velocity.yaml with the planted max_txn_per_min:2 bug."
+    },
+    {
+      "id": "S3",
+      "title": "Brick-and-Mortar Retail: one region's revenue down with flat footfall (the cross-system mystery)",
+      "domain": "Brick-and-Mortar Retail",
+      "business_symptom": "Store region 'Midwest-Mall': revenue down 22% week-over-week, but footfall is flat and POS uptime is normal. A business mystery, not an exception -- nothing is 'down.'",
+      "why_impossible_for_solo_coding_agent": "Nothing errored and nothing is technically down. The truth -- an inventory-sync job silently stopped reconciling shelf-vs-system stock for one region, so popular SKUs show 'in stock', never reorder, and quietly stock out -- lives across the sales-by-store warehouse + the sync-job logs + the job config. No single log says 'Midwest-Mall is broken.' This is the purest multi-agent parallel-correlation case and the strongest 'use ALL the agents' scenario. Anchored to phantom inventory: out-of-stocks are a ~$1.2T global problem from system-stock != shelf-stock.",
+      "agents_and_actions": [
+        {
+          "agent": "CustomerLiaison (DataAnalyst persona)",
+          "action": "BigQuery store_sales: localizes the regression to Midwest-Mall + a specific SKU set; revenue-per-visit collapsed only there",
+          "system": "BigQuery"
+        },
+        {
+          "agent": "Detective",
+          "action": "Grail: the inventory-sync job's last successful run for that region was 31h ago",
+          "system": "Dynatrace"
+        },
+        {
+          "agent": "LogDiver",
+          "action": "ES|QL: blames the inventory-service v2.0 sync deploy that added a region filter with a typo'd region code -> Midwest-Mall silently excluded",
+          "system": "Elastic"
+        },
+        {
+          "agent": "CodeArch",
+          "action": "Reads inventory-service/sync-config.yaml, fixes the wrong region code (or restores region_batch_size), opens a real MR + a regions completeness assertion",
+          "system": "GitLab"
+        },
+        {
+          "agent": "Scribe",
+          "action": "ColdMemory.recall surfaces a prior similar incident: 'we saw a region-filter typo break a sync before -- here's that postmortem'",
+          "system": "MongoDB Atlas"
+        },
+        {
+          "agent": "Reviewer",
+          "action": "Approves; Evaluator confirms the MR",
+          "system": "Phoenix + GitLab"
+        }
+      ],
+      "real_code_change": "inventory-service/sync-config.yaml (NEW file pushed to the repo): correct the typo'd region code (or restore region_batch_size from 50 to 500, planted '# reduced to cut load') so Midwest-Mall syncs again, plus a regions: ['*'] completeness assertion.",
+      "human_decision_points": [
+        "S2: confirm the diagnosis thread -- the crew presents the localized region+SKU and asks 'is this the right thread to pull? [Yes, fix the sync] [Look at pricing/staffing instead]' (a real mystery, not a known bug)",
+        "P1: approve the sync-config MR, and optionally trigger a manual re-sync now (depth play A/B: sync_connection / run_transformation)"
+      ],
+      "aha_line": "No alarm went off -- one mall region was just quietly making less money while foot traffic stayed normal. The crew proved it was a broken inventory sync hiding empty shelves as 'in stock', shipped the one-character fix, and even remembered the last time this exact mistake happened.",
+      "mom_test": "One mall's shops were slowly losing sales but the same number of people walked in. The AI crew played detective across the systems and found the warehouse computer had quietly stopped updating that store's shelves, so nothing got reordered -- and they recognized they'd seen this exact bug before.",
+      "data_to_seed": "Dynatrace Grail: inventory-sync job logs with last-success-31h-ago for Midwest-Mall. Elastic DEPLOYS row: inventory-service v2.0 sync deploy. BigQuery: add a small store_sales table (region/store/date/revenue) showing the Midwest-Mall drop. Atlas: seed a prior region-sync-typo incident so ColdMemory.recall returns it. GitLab: push inventory-service/sync-config.yaml with the planted region bug."
+    },
+    {
+      "id": "S4",
+      "title": "World Cup / Retail peak: POS checkout failing on the busiest minute (the rollback-vs-patch fork + staged disagreement)",
+      "domain": "2026 World Cup",
+      "business_symptom": "In-store tap-to-pay timing out across mall tenants during the match-day surge -- registers retrying and aborting valid taps as the crowd hits at kickoff.",
+      "why_impossible_for_solo_coding_agent": "The bug only surfaces UNDER LOAD (traffic up to 5x, ~90k concurrent/match) -- it's fine in any test. Resolving it requires choosing FAST between two valid remediations (scale/rollback vs config fix) with revenue-per-minute at stake -- a judgment call across capacity config + code + live customer impact that a sandboxed agent can neither observe nor adjudicate. Anchored to Dynatrace/FreedomPay Jan-2026: payment outages cost $1.2B/min between minutes 8-13; POS downtime $2,300-$9,000/min.",
+      "agents_and_actions": [
+        {
+          "agent": "Detective",
+          "action": "Grail: connection-pool exhaustion + p99 timeouts only under the surge",
+          "system": "Dynatrace"
+        },
+        {
+          "agent": "LogDiver",
+          "action": "ES|QL: blames the pos-gateway deploy that lowered the pool/timeout AND flags the surge -- creating the disagreement",
+          "system": "Elastic"
+        },
+        {
+          "agent": "CustomerLiaison",
+          "action": "BigQuery: quantifies $/minute bleeding DURING the debate (urgency)",
+          "system": "BigQuery"
+        },
+        {
+          "agent": "CodeArch (vs SRE-Actions persona)",
+          "action": "STAGED DISAGREEMENT: CodeArch says 'pos-gateway/capacity.yaml has connection_pool_size and request_timeout set too low -- scaling masks it'; the SRE-Actions mode says 'roll back the deploy now, it's faster.' Commander surfaces both with evidence.",
+          "system": "GitLab"
+        },
+        {
+          "agent": "Commander",
+          "action": "Adjudicates / escalates the two positions to the human as a costed Decision card",
+          "system": "None"
+        },
+        {
+          "agent": "Reviewer",
+          "action": "Approves whichever path the human chose; Evaluator confirms the resulting MR (patch OR revert)",
+          "system": "Phoenix + GitLab"
+        }
+      ],
+      "real_code_change": "pos-gateway/capacity.yaml (NEW file pushed to the repo): connection_pool_size: 20 + request_timeout_ms: 1000 (planted). Option A (patch forward) = CodeArch MR raising pool to 200 and timeout to 5000. Option B (roll back) = CodeArch's NEW revert-MR mode opens a revert of the pos-gateway deploy. SAME crew, genuinely different MR depending on the human's call.",
+      "human_decision_points": [
+        "P3 (the marquee fork): the rollback-vs-patch Decision card, costed live -- 'rolling back is faster but loses the new feature; patching keeps it but takes ~3 min more -- at $X/min, which? [Roll back now] [Patch forward] [Do both]'",
+        "S2: which specialist's read to trust when LogDiver blames the surge and CodeArch blames the config"
+      ],
+      "aha_line": "At the busiest minute of match day two AI specialists disagreed -- one wanted to roll back, one found the real cap in the config -- and a human broke the tie in one click while $1.2 million a minute was on the line.",
+      "mom_test": "During the World Cup rush the card machines started failing. Two AI experts argued about the fix, the system showed a person how much money was being lost every minute, and the person picked the winner -- solved in minutes instead of hours.",
+      "data_to_seed": "Dynatrace Grail: pos-gateway connection-pool-exhaustion logs under surge. Elastic DEPLOYS row: pos-gateway deploy most-recent. BigQuery: customer_usage checkout path for $/min impact. GitLab: push pos-gateway/capacity.yaml with the planted low pool/timeout; ensure a revert target deploy exists for Option B."
+    },
+    {
+      "id": "S5",
+      "title": "Proactive GDPR/PII compliance sweep (the non-incident 'contributing to society' beat)",
+      "domain": "Research/Analysis",
+      "business_symptom": "No alert -- a scheduled compliance sweep asks: 'are we shipping any export containing un-redacted customer PII before it reaches a public repo?' It found a new analytics connector syncing raw email/customer_id toward a destination that feeds a public dashboard.",
+      "why_impossible_for_solo_coding_agent": "It is purely PROACTIVE -- a reactive sandboxed agent is never triggered (nothing errored, no human asked). And the fix is a DATA-LAYER write across live SaaS: provision a Fivetran connector, run a transformation, redact PII columns -- plus a human compliance sign-off that is non-delegable by definition. A repo-bound agent has no reach to do any of it. Anchored to GDPR fines up to EUR 20M / 4% of global revenue; the Apotheka case EUR 3M / 750k records.",
+      "agents_and_actions": [
+        {
+          "agent": "CustomerLiaison (DataAnalyst + Compliance personas)",
+          "action": "BigQuery: scans customer_usage for PII columns about to leave the warehouse; flags email/customer_id",
+          "system": "BigQuery"
+        },
+        {
+          "agent": "CustomerLiaison (depth play A then B then C)",
+          "action": "create_connection provisions the un-synced source, run_transformation refreshes the anonymized rollup, modify_connection_column_config hashes the PII -- all three Fivetran writes on screen",
+          "system": "Fivetran"
+        },
+        {
+          "agent": "CodeArch",
+          "action": "Opens a real COMPLIANCE MR adding data-policy/pii-allowlist.yaml declaring which columns may ever leave the warehouse + a CI check stub",
+          "system": "GitLab"
+        },
+        {
+          "agent": "Scribe",
+          "action": "Records the sweep with vector recall of any prior PII incident",
+          "system": "MongoDB Atlas"
+        },
+        {
+          "agent": "Reviewer",
+          "action": "Approves; Evaluator confirms the compliance MR",
+          "system": "Phoenix + GitLab"
+        }
+      ],
+      "real_code_change": "data-policy/pii-allowlist.yaml (NEW file pushed to the repo): a CodeArch compliance MR declaring the allowlist of columns permitted to leave the warehouse + a CI check stub -- plus the full live Fivetran provision/transform/redact chain (the only scenario that exercises all three depth plays).",
+      "human_decision_points": [
+        "Approve provisioning the new connector (cost/scope)",
+        "P2 compliance sign-off (the whole point): 'redact email/customer_id across this export before it's exposed? this is a compliance change a human must approve' [Sign off] [Review columns] [Cancel]"
+      ],
+      "aha_line": "Nothing broke -- the crew proactively caught customer PII about to leak into a public dataset, redacted it across the live data pipeline, and opened the compliance fix before any regulator could, then required a human to sign off because that's the law.",
+      "mom_test": "Before anything went wrong, the AI team went looking for problems, found customers' private emails about to end up somewhere public, hid them everywhere they flowed, and wrote up the fix -- but a real person had to approve it, because privacy law requires a human.",
+      "data_to_seed": "BigQuery: customer_usage already has email-like PII shape (or add an email column). Fivetran: an un-synced source for depth play A + the existing connector for C. GitLab: the repo accepts the new data-policy/pii-allowlist.yaml. No Dynatrace/Elastic alert needed -- this is triggered by a scheduled run, not the webhook, proving proactivity."
+    }
+  ],
+  "build_order": [
+    "1. KILL THE GIMMICK (data + repo, highest ROI, no agent-code changes). Push 5 new real files to the tiny GitLab target repo, each with a planted, inline-commented bug: ticketing-service/pricing-rules.yaml, fraud-rules/velocity.yaml, inventory-service/sync-config.yaml, pos-gateway/capacity.yaml, data-policy/pii-allowlist.yaml (the last is the MR target, not a bug). CodeArch already grounds on fetch_repo_tree() so it will read the right file per scenario. This alone makes every MR genuinely different.",
+    "2. PARAMETERIZE THE SEEDS per scenario. Make seed_elastic_deploys.py emit a different culprit deploy (ticketing v3.1, fraud-rules, inventory-sync, pos-gateway) instead of always payment-service v2.4.1; parameterize seed_dynatrace.py Grail logs to each scenario's service/symptom; add a small BigQuery store_sales table for S3 and (if needed) a ticket_orders slice for S1; seed a prior region-sync incident into Atlas so ColdMemory.recall returns it in S3. Replace demo_scenarios.json's one-bug-three-skins with the 5 distinct scenarios.",
+    "3. ACTIVATE THE DEPTH PLAYS (one-line plumbing, already-built tools). In customer_liaison_node set req.context per scenario so depth play C fires in S2/S5 and A/B fire in S5. The tools (create_connection/run_transformation/modify_connection_column_config) are already verified GREEN -- they just never receive a context today.",
+    "4. WIRE SCRIBE VECTOR RECALL. Call ColdMemory.recall (or related_to) at the start of a run and stream 'have we seen this before?' into the channel -- the method already exists and is unused on the live path. Powers S3's memory beat.",
+    "5. BUILD THE HUMAN-IN-THE-LOOP ROUND-TRIP (the core new architecture). Add interrupt() at the 3 pause points in graph.py (before CodeArch MR; before Fivetran redaction; at the rollback-vs-patch fork). Add Command(resume=...) handling in OrchestratorRunner. Add POST /api/incident/{id}/resume + POST /api/incident/{id}/ask in app.py. Add brief / decision_request / decision_made / tool_result event builders to hivemind/events.py and an awaiting_human PillState. The AsyncRedisSaver checkpointer already exists -- this is the small-lift wire, not a rewrite.",
+    "6. WIRE THE COMPOSER -> BACKEND. Replace store.ts line 225 local-only early-return with respondToAgent(incidentId, decision) that POSTs to /resume; route composer.tsx @mentions to /ask. This closes the gap the user called out.",
+    "7. THE COMMANDER + BRIEF CARD. Add a thin template-driven Commander that emits the brief event at channel creation and narrates handoffs; render the pinned BRIEF card above message-list.tsx. Keep it non-LLM (or one cheap Flash call) to protect the Vertex per-minute budget.",
+    "8. THE LEGIBILITY UI. Build impact-panel.tsx (Impact/Decision/Verification right rail), approval-card.tsx (buttons -> /resume), timeline.tsx, the collapsible Agent-Trace with real tool names, and the on-screen external-Evaluator pill (reuse harness/evaluator.py _fetch_mr verdict, emit a verify event).",
+    "9. STAGE THE ONE DISAGREEMENT (S4). Add CodeArch's revert-MR mode and the SRE-Actions persona; have the Commander surface both positions as the costed rollback-vs-patch Decision card. This is the AutoGen-style 'team' signal a solo agent structurally cannot show.",
+    "10. RECORD THE 5 VIDEOS, each opening with the BRIEF card and closing on the timeline's before/after delta + the green Evaluator pill ('verified by an independent process')."
+  ],
+  "biggest_risks": [
+    "Vertex per-minute throttle (~3 min cooldown) makes full 6-agent runs serial and ~2-5 min. Mitigation: keep exactly 6 true serial Gemini nodes -- the 'new agents' (Commander, DataAnalyst, Compliance, SRE-Actions) are thin template narrators or personas/modes of existing agents, NOT new LLM hops. HITL pauses actually HELP by spacing LLM calls across human think-time. Record videos with one fresh fire per session.",
+    "Seeding 5 distinct, internally-consistent datasets is the real work, not the code. Each scenario needs Dynatrace Grail logs + an Elastic deploy-registry row + a BigQuery slice that all tell the SAME story and all point at the SAME repo file the planted bug lives in -- exactly the cross-seed coherence the current single-bug setup already has for checkout. Budget time for this; it's where a 'reskin' would sneak back in.",
+    "The HITL interrupt()/Command(resume) wire touches the orchestrator's hot path and the Redis checkpointer. A bug here can freeze a run mid-incident. Mitigation: reuse the existing thread_id/AsyncRedisSaver resume path that run_full already exercises; gate interrupts behind a per-scenario flag so a non-HITL run still completes end-to-end; keep the AGENT_TIMEOUT/shield() backstop.",
+    "The staged disagreement (S4) must be a GENUINE evidence-grounded conflict, not scripted theater -- a savvy audience punishes the Devin cherry-pick. Mitigation: make LogDiver's surge-blame and CodeArch's config-blame both literally true given the seeded data, so the human is choosing between two valid fixes, not watching a puppet show. The external Evaluator on screen is the honesty backstop.",
+    "BigQuery currently only has services checkout/payment-service/search/notifications and 12 customers; S1 (ticketing) and S3 (store regions) need new tables/slices. Mitigation: add a small store_sales table for S3 and extend customer_usage services_used (or a ticket_orders table) for S1 -- small, real additions, not fabrications.",
+    "Scenario S5 is non-incident and triggered by a schedule, not the Dynatrace webhook -- there's no scheduled-trigger path today. Mitigation: a simple cron/manual fire that builds a synthetic 'sweep' payload and calls OrchestratorRunner directly (the proactivity is the point; the trigger mechanism can be a script for the demo). Treat S5 as optional/stretch behind the 4 incident scenarios.",
+    "Compliance/PII redaction via Fivetran modify_connection_column_config affects a real connector's column config -- a destructive-looking write in a live demo. Mitigation: it's already verified (test_liaison_redact GREEN) and the human approval gate (P2) sits in front of it; demo against the known port_doubting group connector, and keep the redaction reversible/idempotent."
+  ]
+}

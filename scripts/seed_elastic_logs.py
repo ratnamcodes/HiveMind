@@ -1,10 +1,16 @@
 """Seed synthetic Kubernetes logs into Elastic for LogDiver to search.
 
 Builds the `hivemind-logs-000001` index with a hybrid mapping and fills it
-with ~5,000 synthetic log lines, including a deliberate burst of "connection
-refused to checkout-db" ERRORs on the `checkout` service in the last 30 minutes
-so anomaly detection has a real anomaly to find — one the recent checkout
-pgbouncer deploy neatly explains.
+with ~5,000 synthetic log lines, including a deliberate burst of "deadline
+exceeded / retry timeout" ERRORs on the `payment-service` in the last 30 minutes
+(plus correlated `checkout` latency symptoms) so anomaly detection has a real
+anomaly to find — one the recent payment-service v2.4.1 deploy that set
+retry.timeout_seconds=1 neatly explains.
+
+This is deliberately aligned with the Dynatrace seed (seed_dynatrace.py) and the
+GitLab target repo's planted bug (payment-service/config.yaml timeout 1->5): all
+three partners corroborate ONE root cause, so Detective + LogDiver agree and the
+orchestrator's Reviewer approves instead of escalating on a cross-agent contradiction.
 """
 from __future__ import annotations
 
@@ -49,13 +55,22 @@ ERROR_MSGS = [
     "unhandled exception: invalid state",
     "connection timeout to {svc}-db after 5000ms",
 ]
-INCIDENT_SERVICE = "checkout"
+# The culprit: payment-service aborting valid calls under load because the
+# v2.4.1 deploy set retry.timeout_seconds=1 (too low). Same story as Dynatrace + GitLab.
+INCIDENT_SERVICE = "payment-service"
 INCIDENT_MSGS = [
-    "connection refused to checkout-db after 5000ms",
-    "could not connect to checkout-db: connection refused",
-    "checkout-db pool exhausted: max_client_conn reached (pgbouncer)",
-    "circuit breaker OPEN for checkout-db",
-    "503 Service Unavailable from checkout-db",
+    "payment call aborted: deadline exceeded after 1000ms (retry.timeout_seconds=1 too low)",
+    "context deadline exceeded calling payment gateway — retry budget exhausted in 1s",
+    "retry storm: 3 attempts at 1s each timed out, request queue backing up",
+    "valid payment aborted under load — retry.timeout_seconds=1 should be 5",
+    "504 Gateway Timeout from payment-service after 1s",
+]
+# Correlated downstream symptom: checkout p99 doubles because it blocks on payment retries.
+CORR_SERVICE = "checkout"
+CORR_MSGS = [
+    "checkout p99 latency 520ms — SLO breach (threshold 300ms), blocked on payment-service retries",
+    "checkout request slow: upstream payment-service timing out (deadline exceeded)",
+    "checkout latency degraded right after the payment-service v2.4.1 deploy",
 ]
 
 
@@ -78,10 +93,16 @@ def gen_actions():
         ts = now - timedelta(seconds=random.randint(0, 6 * 3600))
         recent = ts > now - timedelta(minutes=30)
 
-        if recent and random.random() < 0.4:
-            # checkout is melting down in the last half hour
+        roll_recent = random.random()
+        if recent and roll_recent < 0.40:
+            # payment-service is the loud culprit in the last half hour
             service, level = INCIDENT_SERVICE, "ERROR"
             message = random.choice(INCIDENT_MSGS)
+        elif recent and roll_recent < 0.52:
+            # checkout shows correlated symptoms (downstream of the payment timeout)
+            service = CORR_SERVICE
+            level = random.choice(["WARN", "ERROR"])
+            message = random.choice(CORR_MSGS)
         else:
             service = random.choice(SERVICES)
             roll = random.random()
