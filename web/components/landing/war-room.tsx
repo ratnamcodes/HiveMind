@@ -79,11 +79,11 @@ export function LandingWarRoom() {
       <div className="flex items-center gap-2 border-b border-white/10 bg-white/[0.03] px-4 py-2.5">
         <div className="flex gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-amber-400/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-orange-400/70" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
         </div>
         <span className="ml-2 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-zinc-200">
-          <Hexagon className="h-3.5 w-3.5 text-amber-400" strokeWidth={2.5} fill="currentColor" /> HiveMind War Room
+          <Hexagon className="h-3.5 w-3.5 text-orange-400" strokeWidth={2.5} fill="currentColor" /> HiveMind War Room
         </span>
         {done ? (
           <button
@@ -164,7 +164,7 @@ export function LandingWarRoom() {
           </RailBlock>
           <RailBlock title="The fix">
             {mrShown ? (
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/30 bg-amber-400/10 px-2 py-1 font-mono text-[11px] text-amber-300">
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-orange-400/30 bg-orange-400/10 px-2 py-1 font-mono text-[11px] text-orange-300">
                 <GitMerge className="h-3 w-3" /> MR #52 · {recovered ? "merged" : "open"}
               </span>
             ) : (
@@ -246,7 +246,7 @@ function Line({ beat }: { beat: Beat }) {
           <p className="text-[13px] leading-snug text-zinc-300">
             {beat.text}
             {beat.chip && (
-              <span className="ml-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 align-middle font-mono text-[11px] text-amber-300">
+              <span className="ml-1.5 inline-flex items-center gap-1 rounded-md border border-orange-400/30 bg-orange-400/10 px-1.5 py-0.5 align-middle font-mono text-[11px] text-orange-300">
                 <GitMerge className="h-3 w-3" /> {beat.chip}
               </span>
             )}
@@ -298,13 +298,13 @@ function LiveBar({ next }: { next?: Beat }) {
     label = "Shipping the fix and checking recovery";
   }
   return (
-    <div className="flex shrink-0 items-center gap-2.5 rounded-md border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2">
+    <div className="flex shrink-0 items-center gap-2.5 rounded-md border border-orange-400/20 bg-orange-400/[0.05] px-3 py-2">
       <span className="relative flex h-2 w-2 shrink-0">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/70" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400/70" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-400" />
       </span>
       <span className={cn("text-xs", color ?? "text-zinc-400")}>{label}</span>
-      <span className="ml-auto inline-flex items-end gap-0.5 pb-0.5 text-amber-300/90">
+      <span className="ml-auto inline-flex items-end gap-0.5 pb-0.5 text-orange-300/90">
         {[0, 150, 300].map((d) => (
           <span key={d} className="h-1 w-1 animate-bounce rounded-full bg-current" style={{ animationDelay: `${d}ms`, animationDuration: "900ms" }} />
         ))}

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 export function Divider({ className, children }: { className?: string; children?: ReactNode }) {
   return (
-    <div className={cn("mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-500", className)}>
+    <div className={cn("mx-auto my-6 flex w-full items-center justify-between gap-3 text-sm text-gray-600", className)}>
       {children ? (
         <>
           <div className="h-px w-full bg-linear-to-r from-transparent to-gray-200" />
@@ -33,7 +33,7 @@ export function FeatureDivider({ className }: { className?: string }) {
         {dots.map((d, i) => (
           <div
             key={i}
-            className="absolute size-1 rounded-full bg-amber-300/50"
+            className="absolute size-1 rounded-full bg-gray-300"
             style={{ top: d.top, left: d.left, animation: `wave 2s infinite ease-in-out`, animationDelay: `${d.delay}s` }}
           />
         ))}

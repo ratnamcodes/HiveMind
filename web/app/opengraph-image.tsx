@@ -8,7 +8,7 @@ export const contentType = "image/png";
 const HEX = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24">
     <defs><linearGradient id="g" x1="4" y1="1" x2="20" y2="23" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FBBF24"/><stop offset="0.55" stop-color="#F59E0B"/><stop offset="1" stop-color="#D97706"/>
+      <stop stop-color="#FB923C"/><stop offset="0.55" stop-color="#F97316"/><stop offset="1" stop-color="#EA580C"/>
     </linearGradient></defs>
     <path d="M12 1.2 21.36 6.6V17.4L12 22.8 2.64 17.4V6.6L12 1.2Z" fill="url(#g)"/>
     <g stroke="#fff" stroke-width="1.1" stroke-linecap="round" opacity="0.95">
@@ -50,7 +50,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 14, color: "#71717A", fontSize: 24 }}>
-          <span style={{ color: "#F59E0B" }}>●</span>
+          <span style={{ color: "#F97316" }}>●</span>
           Dynatrace · GitLab · Elastic · MongoDB · BigQuery · Vertex AI
         </div>
       </div>
