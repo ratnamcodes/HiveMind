@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "HiveMind — AI that fixes your incidents end to end";
+export const alt = "HiveMind · AI that fixes your incidents end to end";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
