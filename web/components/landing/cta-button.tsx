@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const variants = {
   primary:
-    "border-b-[1.5px] border-amber-700 bg-linear-to-b from-amber-400 to-amber-500 text-white shadow-[0_0_0_2px_rgba(0,0,0,0.04),0_0_14px_0_rgba(255,255,255,0.19)] hover:shadow-amber-300/70 hover:to-amber-500",
+    "border-b-[1.5px] border-orange-700 bg-linear-to-b from-orange-400 to-orange-500 text-white shadow-[0_0_0_2px_rgba(0,0,0,0.04),0_0_14px_0_rgba(255,255,255,0.19)] hover:shadow-orange-300/70 hover:to-orange-500",
   secondary:
     "border border-gray-300 bg-white text-gray-900 shadow-xs hover:bg-gray-50",
   ghost: "border border-transparent text-gray-700 hover:bg-gray-100",
@@ -27,7 +27,7 @@ export function CtaButton({
     <Link
       href={href}
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-5 py-3 text-sm leading-4 font-medium tracking-wide whitespace-nowrap transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50",
+        "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-5 py-3 text-sm leading-4 font-medium tracking-wide whitespace-nowrap transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50",
         variants[variant],
         className,
       )}

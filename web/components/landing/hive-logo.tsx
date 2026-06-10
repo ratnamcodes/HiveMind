@@ -11,9 +11,9 @@ export function HiveMark({ className }: { className?: string }) {
     >
       <defs>
         <linearGradient id="hive-grad" x1="4" y1="1" x2="20" y2="23" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FBBF24" />
-          <stop offset="0.55" stopColor="#F59E0B" />
-          <stop offset="1" stopColor="#D97706" />
+          <stop stopColor="#FB923C" />
+          <stop offset="0.55" stopColor="#F97316" />
+          <stop offset="1" stopColor="#EA580C" />
         </linearGradient>
       </defs>
       {/* hive cell */}

@@ -4,7 +4,7 @@ import { HiveMark } from "./hive-logo";
 export function Testimonial() {
   return (
     <section className="px-4 xl:px-0">
-      <div className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-2xl bg-linear-to-br from-amber-500 via-orange-500 to-orange-600 shadow-2xl shadow-amber-500/20 ring-1 ring-black/5">
+      <div className="relative mx-auto w-full max-w-6xl overflow-hidden rounded-2xl bg-linear-to-br from-orange-400 via-orange-500 to-orange-600 shadow-2xl shadow-orange-500/20 ring-1 ring-black/5">
         {/* honeycomb motif */}
         <svg aria-hidden className="absolute inset-0 size-full opacity-[0.15] [mask-image:radial-gradient(white,transparent_85%)]">
           <defs>
@@ -26,8 +26,8 @@ export function Testimonial() {
             <p className="relative before:absolute before:right-full before:text-white/55 before:content-['“'] after:text-white/55 after:content-['”']">
               On-call used to start with a blank terminal at 2am.{" "}
               <span className="text-white/75">
-                Now it starts with a root cause, a merge request, and a recovery check already waiting — and a
-                human still says yes before anything ships.
+                Now it starts with a root cause, a merge request, and a recovery check already waiting. A human
+                still says yes before anything ships.
               </span>
             </p>
           </blockquote>
