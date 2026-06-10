@@ -22,6 +22,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      # The web app uses bun (bun.lock), so `vercel build` shells out to bun — install it on the
+      # runner or the build fails with "spawn bun ENOENT".
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
       - name: Pull Vercel project settings
