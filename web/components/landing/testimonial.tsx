@@ -21,7 +21,7 @@ export function Testimonial() {
         </svg>
 
         <div className="relative z-10 p-8 sm:p-14 lg:p-20">
-          <HiveMark className="size-10 drop-shadow-sm" />
+          <HiveMark className="size-10 drop-shadow-sm" tone="white" />
           <blockquote className="mt-8 max-w-3xl text-2xl leading-snug font-medium tracking-tight text-balance text-white md:text-3xl lg:text-4xl">
             <p className="relative before:absolute before:right-full before:text-white/55 before:content-['“'] after:text-white/55 after:content-['”']">
               On-call used to start with a blank terminal at 2am.{" "}
