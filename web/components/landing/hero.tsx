@@ -27,8 +27,8 @@ export function Hero() {
       <FadeContainer className="relative z-10 flex flex-col items-center justify-center px-4">
         <FadeDiv className="mx-auto">
           <a href="#demo" className="group mx-auto w-full">
-            <div className="inline-flex max-w-full items-center gap-3 rounded-full bg-white/60 px-2.5 py-0.5 pr-3 pl-0.5 font-medium text-gray-900 ring-1 shadow-lg shadow-amber-400/20 ring-black/10 backdrop-blur-[1px] transition-colors hover:bg-amber-500/5 sm:text-sm">
-              <span className="shrink-0 truncate rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-600">
+            <div className="inline-flex max-w-full items-center gap-3 rounded-full bg-white/60 px-2.5 py-0.5 pr-3 pl-0.5 font-medium text-gray-900 ring-1 shadow-lg shadow-orange-400/20 ring-black/10 backdrop-blur-[1px] transition-colors hover:bg-orange-500/5 sm:text-sm">
+              <span className="shrink-0 truncate rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700">
                 Live
               </span>
               <span className="flex items-center gap-1 truncate">
@@ -62,12 +62,12 @@ export function Hero() {
         </FadeDiv>
 
         <FadeDiv className="mt-12 w-full max-w-3xl">
-          <p className="text-center text-xs font-medium tracking-wide text-gray-500 uppercase">
+          <p className="text-center text-xs font-medium tracking-wide text-gray-600 uppercase">
             Runs on the stack you already have
           </p>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-x-9 gap-y-5">
             {TRUST.map(({ name, Logo }) => (
-              <div key={name} className="flex items-center gap-2 text-gray-400 transition-colors hover:text-gray-600">
+              <div key={name} className="flex items-center gap-2 text-gray-500 transition-colors hover:text-gray-700">
                 <Logo className="h-6 w-6" />
                 <span className="text-sm font-medium">{name}</span>
               </div>

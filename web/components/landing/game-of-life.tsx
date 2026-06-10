@@ -23,11 +23,11 @@ export function GameOfLife() {
 
     let animationFrameId = 0;
     let timeoutId: ReturnType<typeof setTimeout>;
-    const cellSize = 8;
+    const cellSize = 9;
     const cols = Math.floor(canvas.width / cellSize);
     const rows = Math.floor(canvas.height / cellSize);
     const transitionSpeed = 0.16;
-    const maxOpacity = 0.38;
+    const maxOpacity = 0.22;
 
     let grid: Grid = Array(rows)
       .fill(null)
@@ -64,10 +64,10 @@ export function GameOfLife() {
             cell.opacity = Math.max(cell.opacity - transitionSpeed, 0);
           }
           if (cell.opacity > 0) {
-            // warm near-black dots (stone-800) — high contrast on gray-50, like the template's grid
-            ctx.fillStyle = `rgba(41, 37, 36, ${cell.opacity})`;
+            // soft neutral dots (stone-500), subtle and even across the whole hero
+            ctx.fillStyle = `rgba(120, 113, 108, ${cell.opacity})`;
             ctx.beginPath();
-            ctx.arc(j * cellSize + cellSize / 2, i * cellSize + cellSize / 2, 1.5, 0, Math.PI * 2);
+            ctx.arc(j * cellSize + cellSize / 2, i * cellSize + cellSize / 2, 1.4, 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -93,8 +93,8 @@ export function GameOfLife() {
   }, []);
 
   return (
-    <div className="pointer-events-none overflow-hidden select-none [mask-image:radial-gradient(circle_at_center,#000_0%,#000_18%,transparent_82%)]">
-      <canvas ref={canvasRef} width={1700} height={760} />
+    <div className="pointer-events-none overflow-hidden select-none [mask-image:radial-gradient(ellipse_78%_72%_at_50%_50%,#000_48%,transparent_92%)]">
+      <canvas ref={canvasRef} width={2400} height={1000} />
     </div>
   );
 }

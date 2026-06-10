@@ -64,17 +64,17 @@ export function Footer() {
           </Link>
           <div>
             <div className="mt-4 flex items-center">
-              <Link href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="HiveMind on GitHub" className="rounded-sm p-2 text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900">
+              <Link href={REPO_URL} target="_blank" rel="noopener noreferrer" aria-label="HiveMind on GitHub" className="rounded-sm p-2 text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-900">
                 <Github className="size-5" />
               </Link>
             </div>
-            <div className="mt-2 flex items-center gap-2 pl-2 text-xs text-gray-400">
+            <div className="mt-2 flex items-center gap-2 pl-2 text-xs text-gray-500">
               <span>Built on</span>
               <GoogleCloudLogo className="size-4" style={{ color: BRAND_COLOR.googlecloud }} />
-              <span className="text-gray-500">Google Cloud</span>
+              <span className="text-gray-600">Google Cloud</span>
               <span aria-hidden>·</span>
               <GeminiLogo className="size-4" />
-              <span className="text-gray-500">Gemini on Vertex AI</span>
+              <span className="text-gray-600">Gemini on Vertex AI</span>
             </div>
           </div>
         </div>
@@ -85,7 +85,7 @@ export function Footer() {
             <ul className="space-y-4">
               {section.items.map((item) => (
                 <li key={item.label} className="text-sm">
-                  <Link href={item.href} className="text-gray-600 transition-colors hover:text-gray-900">
+                  <Link href={item.href} className="text-gray-700 transition-colors hover:text-gray-900">
                     {item.label}
                   </Link>
                 </li>
@@ -94,7 +94,7 @@ export function Footer() {
           </div>
         ))}
 
-        <div className="mt-12 w-full border-t border-gray-200 pt-6 text-xs text-gray-400">
+        <div className="mt-12 w-full border-t border-gray-200 pt-6 text-xs text-gray-500">
           © {new Date().getFullYear()} HiveMind · An autonomous incident-response crew. Dynatrace · GitLab · Gemini on Vertex AI.
         </div>
       </footer>

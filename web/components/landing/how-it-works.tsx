@@ -56,7 +56,7 @@ function DetectOrbit() {
             <div className="relative z-10 flex size-20 items-center justify-center rounded-full bg-white ring-1 shadow-[inset_0px_-15px_20px_rgba(0,0,0,0.1),0_7px_10px_0_rgba(0,0,0,0.15)] ring-black/20">
               <HiveMark className="size-10" />
             </div>
-            <div className="absolute inset-12 animate-[spin_8s_linear_infinite] rounded-full bg-linear-to-t from-transparent via-amber-400 to-transparent blur-lg" />
+            <div className="absolute inset-12 animate-[spin_8s_linear_infinite] rounded-full bg-linear-to-t from-transparent via-orange-400 to-transparent blur-lg" />
           </div>
         </div>
       </Orbit>
@@ -79,9 +79,9 @@ function FixConverge() {
         {SIGNALS.map((s) => (
           <div key={s.label} className="absolute" style={{ top: s.top, left: s.left }}>
             <div className="relative">
-              <div className="absolute inset-0 size-full animate-pulse rounded-md bg-amber-200/70 blur-[4px]" />
+              <div className="absolute inset-0 size-full animate-pulse rounded-md bg-orange-200/70 blur-[4px]" />
               <div className="relative flex items-center gap-1.5 rounded-md bg-white px-2 py-1 ring-1 shadow-sm ring-black/10">
-                <span className="text-[10px] font-medium text-gray-400 uppercase">{s.label}</span>
+                <span className="text-[10px] font-medium text-gray-500 uppercase">{s.label}</span>
                 <span className="font-mono text-xs font-medium text-gray-700">{s.value}</span>
               </div>
             </div>
@@ -95,18 +95,18 @@ function FixConverge() {
                 <div className="relative">
                   <div className="h-0.5 w-40 bg-linear-to-r from-gray-300 to-transparent" />
                   <div
-                    className="absolute top-0 left-0 h-0.5 w-20 bg-linear-to-r from-transparent via-amber-400 to-transparent"
+                    className="absolute top-0 left-0 h-0.5 w-20 bg-linear-to-r from-transparent via-orange-400 to-transparent"
                     style={{ animation: `gridMovingLine 4s linear infinite ${index * 0.6}s`, animationFillMode: "backwards" }}
                   />
                 </div>
               </div>
             ))}
-            <div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-lg border border-amber-300/60 bg-white px-3 py-2 shadow-xl shadow-amber-500/10">
+            <div className="absolute -translate-x-1/2 -translate-y-1/2 rounded-lg border border-orange-300/60 bg-white px-3 py-2 shadow-xl shadow-orange-500/10">
               <div className="flex items-center gap-1.5">
-                <GitMerge className="size-4 text-amber-600" />
+                <GitMerge className="size-4 text-orange-600" />
                 <span className="font-mono text-xs font-semibold text-gray-900">MR #52</span>
               </div>
-              <div className="mt-0.5 font-mono text-[10px] text-gray-500">downstream_delay_ms → 0</div>
+              <div className="mt-0.5 font-mono text-[10px] text-gray-600">downstream_delay_ms → 0</div>
             </div>
           </div>
         </div>
@@ -129,8 +129,8 @@ function RecoveryChart() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-gray-500">checkout p95 latency</div>
-            <div className="mt-0.5 text-3xl font-semibold tracking-tight text-gray-900">3<span className="text-lg font-normal text-gray-400">ms</span></div>
+            <div className="text-sm text-gray-600">checkout p95 latency</div>
+            <div className="mt-0.5 text-3xl font-semibold tracking-tight text-gray-900">3<span className="text-lg font-normal text-gray-500">ms</span></div>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
             <ShieldCheck className="size-3.5" /> SRG: PASS
@@ -139,22 +139,22 @@ function RecoveryChart() {
         <svg viewBox="0 0 300 150" className="mt-4 w-full" fill="none">
           <defs>
             <linearGradient id="rec-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#f59e0b" stopOpacity="0.22" />
-              <stop offset="1" stopColor="#f59e0b" stopOpacity="0" />
+              <stop offset="0" stopColor="#f97316" stopOpacity="0.22" />
+              <stop offset="1" stopColor="#f97316" stopOpacity="0" />
             </linearGradient>
           </defs>
           {/* SLO goal line */}
-          <line x1="0" y1="92" x2="300" y2="92" className="stroke-gray-300" strokeWidth="1" strokeDasharray="4 4" />
-          <text x="2" y="88" className="fill-gray-400" fontSize="9">300ms goal</text>
+          <line x1="0" y1="92" x2="300" y2="92" className="stroke-gray-400" strokeWidth="1" strokeDasharray="4 4" />
+          <text x="2" y="88" className="fill-gray-500" fontSize="9">300ms goal</text>
           <path d={area} fill="url(#rec-fill)" />
-          <path d={line} className="stroke-amber-500" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          <path d={line} className="stroke-orange-500" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           {/* fix marker */}
-          <line x1="150" y1="0" x2="150" y2="140" className="stroke-amber-400/50" strokeWidth="1" strokeDasharray="3 3" />
-          <circle cx="150" cy="118" r="3.5" className="fill-white stroke-amber-500" strokeWidth="2" />
+          <line x1="150" y1="0" x2="150" y2="140" className="stroke-orange-400/50" strokeWidth="1" strokeDasharray="3 3" />
+          <circle cx="150" cy="118" r="3.5" className="fill-white stroke-orange-500" strokeWidth="2" />
         </svg>
-        <div className="mt-1 flex items-center justify-between font-mono text-[10px] text-gray-400">
+        <div className="mt-1 flex items-center justify-between font-mono text-[10px] text-gray-500">
           <span>before fix</span>
-          <span className="text-amber-600">MR #52 merged</span>
+          <span className="text-orange-600">MR #52 merged</span>
           <span>after fix</span>
         </div>
       </div>
@@ -165,24 +165,24 @@ function RecoveryChart() {
 // ── The section ────────────────────────────────────────────────────────────────────────────────
 const STEPS = [
   {
-    eyebrow: "1 — It catches the problem",
+    eyebrow: "1. It catches the problem",
     title: "The page wakes HiveMind, not you",
-    body: "When Dynatrace Davis flags a real problem on your service, HiveMind wakes up on its own — no polling, no rules to wire up. It pulls the problem and its evidence straight from your live Grail data.",
-    bullets: ["Triggered by a real Davis problem", "Reads your own telemetry", "Opens an incident war room in seconds"],
+    body: "When Dynatrace Davis flags a real problem, HiveMind wakes up on its own. No polling, no rules to wire up. It pulls the cause and the evidence from your live Grail data.",
+    bullets: ["Triggered by a real Davis problem", "Reads your own telemetry", "Opens an incident room in seconds"],
     Illustration: DetectOrbit,
   },
   {
-    eyebrow: "2 — It finds and writes the fix",
+    eyebrow: "2. It finds and writes the fix",
     title: "Six specialists, one merge request",
-    body: "The crew reads your live logs and traces, pins the slowdown to the exact deploy, and opens the fix as a GitLab merge request you can read. It even names the customers and the revenue at risk.",
-    bullets: ["Root cause from logs + traces", "A real, reviewable GitLab MR", "Customer and revenue impact, quantified"],
+    body: "The crew reads your live logs and traces, pins the slowdown to the exact deploy, and opens the fix as a GitLab merge request. It even names the customers and revenue at risk.",
+    bullets: ["Root cause from logs and traces", "A real, reviewable GitLab MR", "Customer and revenue impact, quantified"],
     Illustration: FixConverge,
   },
   {
-    eyebrow: "3 — It proves the recovery",
+    eyebrow: "3. It proves the recovery",
     title: "The proof comes from Dynatrace",
-    body: "Once you approve, the fix ships. A Dynatrace Site Reliability Guardian then confirms the service is healthy again — so the verdict comes from Dynatrace, not from us.",
-    bullets: ["You approve before anything ships", "The fix ships only once you say yes", "SRG recovery check: fail → pass"],
+    body: "Once you approve, the fix ships. A Dynatrace Site Reliability Guardian confirms the service is healthy again. The verdict comes from Dynatrace, not us.",
+    bullets: ["You approve before anything ships", "The fix ships only when you say yes", "SRG recovery check goes from fail to pass"],
     Illustration: RecoveryChart,
   },
 ];
@@ -193,14 +193,14 @@ export function HowItWorks() {
       <GuideLines quarters />
       <Reveal className="mx-auto max-w-2xl px-2 text-center">
         <Eyebrow>How it works</Eyebrow>
-        <Headline>From a 2am page to a verified fix — on its own</Headline>
-        <p className="mt-4 text-balance text-gray-600">
+        <Headline>From a 2am page to a verified fix, on its own</Headline>
+        <p className="mt-4 text-balance text-gray-700">
           A single coding agent can&apos;t see your production, your customers, or your revenue. HiveMind is a
-          team of specialists that can — and it shows its work at every step.
+          team of specialists that can. It shows its work at every step.
         </p>
       </Reveal>
 
-      <div className="mt-16 flex flex-col gap-y-16 md:gap-y-4">
+      <div className="mt-20 flex flex-col gap-y-24 md:gap-y-12">
         {STEPS.map((step, i) => {
           const Illustration = step.Illustration;
           const flip = i % 2 === 1;
@@ -209,11 +209,11 @@ export function HowItWorks() {
               <div className={flip ? "px-2 md:order-2 md:pl-12" : "px-2 md:pr-12"}>
                 <Eyebrow>{step.eyebrow}</Eyebrow>
                 <Headline as="h3">{step.title}</Headline>
-                <p className="mt-4 text-balance text-gray-600">{step.body}</p>
+                <p className="mt-4 text-balance text-gray-700">{step.body}</p>
                 <ul className="mt-5 space-y-2.5">
                   {step.bullets.map((b) => (
                     <li key={b} className="flex items-center gap-2.5 text-sm text-gray-700">
-                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
                         <CheckTiny />
                       </span>
                       {b}
