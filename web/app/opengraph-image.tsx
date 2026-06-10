@@ -7,7 +7,9 @@ export const contentType = "image/png";
 // The hexagon badge as a data-URI SVG so it renders reliably in the OG image renderer.
 const HEX = `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 32 32">
-    <rect width="32" height="32" rx="7" fill="#18181B"/>
+    <defs><linearGradient id="g" x1="16" y1="0" x2="16" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FB923C"/><stop offset="1" stop-color="#F97316"/></linearGradient></defs>
+    <rect width="32" height="32" rx="7" fill="url(#g)"/>
     <g transform="translate(4 4)" fill="#FFFFFF">
       <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
     </g>
