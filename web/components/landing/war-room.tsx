@@ -82,8 +82,11 @@ export function LandingWarRoom() {
           <span className="h-2.5 w-2.5 rounded-full bg-orange-400/70" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/70" />
         </div>
-        <span className="ml-2 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-zinc-200">
-          <Hexagon className="h-3.5 w-3.5 text-orange-400" strokeWidth={2.5} fill="currentColor" /> HiveMind War Room
+        <span className="ml-2 flex items-center gap-2 whitespace-nowrap text-xs font-medium text-zinc-200">
+          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white text-[#0b0d10]">
+            <Hexagon className="h-3 w-3" strokeWidth={2.5} fill="currentColor" />
+          </span>
+          HiveMind War Room
         </span>
         {done ? (
           <button

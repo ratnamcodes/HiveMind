@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { cookies } from "next/headers";
 
 // Email/password auth: scrypt-hashed passwords + an HMAC-signed httpOnly session cookie.
 // The user records live in the backend (Atlas via /api/users) — NOT on the local filesystem,
@@ -92,4 +93,11 @@ export async function signIn(email: string, password: string) {
   const u = await fetchUser(email);
   if (!u || !verifyPassword(password, u.hash)) return { ok: false as const, error: "Wrong email or password." };
   return { ok: true as const, token: sign(email), email };
+}
+
+// The signed-in user's email from the httpOnly session cookie, or null. Use in server components
+// / layouts to gate the product (the war room and onboarding) behind sign-in.
+export async function currentUserEmail(): Promise<string | null> {
+  const store = await cookies();
+  return verifySession(store.get(SESSION_COOKIE)?.value);
 }

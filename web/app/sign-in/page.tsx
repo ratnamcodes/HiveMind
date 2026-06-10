@@ -98,10 +98,10 @@ export default function SignIn() {
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
           Or{" "}
-          <Link href="/c/ops" className="underline hover:text-foreground">
-            watch a live incident
+          <Link href="/#demo" className="underline hover:text-foreground">
+            watch the demo
           </Link>{" "}
-          without signing in.
+          on the home page.
         </p>
       </div>
     </div>
