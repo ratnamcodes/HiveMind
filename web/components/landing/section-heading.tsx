@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <p className={cn("relative inline-block text-base font-semibold tracking-tight text-amber-600", className)}>
+    <p className={cn("relative inline-block text-lg font-semibold tracking-tight text-amber-600", className)}>
       {children}
-      <span className="absolute top-1 -left-[9px] h-5 w-[3px] rounded-r-sm bg-amber-500" />
+      <span className="absolute top-1 -left-[8px] h-5 w-[3px] rounded-r-sm bg-amber-500" />
     </p>
   );
 }

@@ -33,7 +33,7 @@ export function FeatureDivider({ className }: { className?: string }) {
         {dots.map((d, i) => (
           <div
             key={i}
-            className="absolute size-1 rounded-full bg-amber-400/70"
+            className="absolute size-1 rounded-full bg-amber-300/50"
             style={{ top: d.top, left: d.left, animation: `wave 2s infinite ease-in-out`, animationDelay: `${d.delay}s` }}
           />
         ))}

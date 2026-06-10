@@ -7,7 +7,7 @@ export function CallToAction() {
     <section className="px-4 xl:px-0">
       <Reveal className="mx-auto grid max-w-6xl items-center gap-10 sm:grid-cols-6">
         <div className="sm:col-span-3">
-          <h2 className="text-3xl font-semibold tracking-tighter text-balance text-gray-900 md:text-5xl">
+          <h2 className="text-3xl font-semibold tracking-tighter text-balance text-gray-900 md:text-4xl">
             Turn your next 2am page into a merge request.
           </h2>
           <p className="mt-4 mb-8 max-w-md text-lg text-gray-600">

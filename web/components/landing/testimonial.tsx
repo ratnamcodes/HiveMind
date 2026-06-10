@@ -23,11 +23,13 @@ export function Testimonial() {
         <div className="relative z-10 p-8 sm:p-14 lg:p-20">
           <HiveMark className="size-10 drop-shadow-sm" />
           <blockquote className="mt-8 max-w-3xl text-2xl leading-snug font-medium tracking-tight text-balance text-white md:text-3xl lg:text-4xl">
-            On-call used to start with a blank terminal at 2am.{" "}
-            <span className="text-white/75">
-              Now it starts with a root cause, a merge request, and a recovery check already waiting — and a
-              human still says yes before anything ships.
-            </span>
+            <p className="relative before:absolute before:right-full before:text-white/55 before:content-['“'] after:text-white/55 after:content-['”']">
+              On-call used to start with a blank terminal at 2am.{" "}
+              <span className="text-white/75">
+                Now it starts with a root cause, a merge request, and a recovery check already waiting — and a
+                human still says yes before anything ships.
+              </span>
+            </p>
           </blockquote>
           <div className="mt-10 flex items-center gap-3">
             <span className="h-px w-8 bg-white/40" />
