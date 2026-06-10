@@ -1,26 +1,47 @@
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 
-// Lightweight, dependency-free email/password auth: scrypt-hashed passwords in a JSON store +
-// an HMAC-signed httpOnly session cookie. Real enough for the product (revocable, not plaintext),
-// no native modules, no framework migration. Swap the store for Postgres + Better Auth later.
+// Email/password auth: scrypt-hashed passwords + an HMAC-signed httpOnly session cookie.
+// The user records live in the backend (Atlas via /api/users) — NOT on the local filesystem,
+// because the frontend runs on Vercel where the filesystem is ephemeral and read-only, so a
+// file store made signup 500 and signin always fail. Password hashing/verification stays here;
+// the backend is just the persistent record store.
 
 const SECRET = process.env.HIVEMIND_AUTH_SECRET || "hivemind-dev-secret-change-in-prod-0xA1";
-const STORE = path.join(process.cwd(), ".hivemind-users.json");
 export const SESSION_COOKIE = "hm_session";
+
+// Server-side calls to the backend user store. NEXT_PUBLIC_* are inlined at build time and also
+// readable server-side, so they work as a fallback when HIVEMIND_BACKEND_URL isn't set.
+const BACKEND = (
+  process.env.HIVEMIND_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_BASE ||
+  process.env.NEXT_PUBLIC_API_BASE ||
+  "http://localhost:8000"
+).replace(/\/$/, "");
 
 type User = { email: string; name: string; hash: string };
 
-function load(): Record<string, User> {
+async function fetchUser(email: string): Promise<User | null> {
   try {
-    return JSON.parse(fs.readFileSync(STORE, "utf8"));
+    const r = await fetch(`${BACKEND}/api/users/${encodeURIComponent(email)}`, { cache: "no-store" });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.found ? { email: d.email, name: d.name, hash: d.hash } : null;
   } catch {
-    return {};
+    return null;
   }
 }
-function save(users: Record<string, User>) {
-  fs.writeFileSync(STORE, JSON.stringify(users, null, 2));
+async function putUser(u: User): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const r = await fetch(`${BACKEND}/api/users`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(u),
+    });
+    const d = await r.json().catch(() => ({}));
+    return { ok: !!d.ok, error: d.error };
+  } catch {
+    return { ok: false, error: "store unavailable" };
+  }
 }
 
 function hashPassword(pw: string): string {
@@ -53,20 +74,22 @@ export function verifySession(token: string | undefined): string | null {
   }
 }
 
-export function signUp(email: string, password: string, name: string) {
+export async function signUp(email: string, password: string, name: string) {
   email = email.trim().toLowerCase();
-  if (!email.includes("@") || password.length < 8) return { ok: false as const, error: "Enter a valid email and an 8+ char password." };
-  const users = load();
-  if (users[email]) return { ok: false as const, error: "An account with that email already exists." };
-  users[email] = { email, name: name || email.split("@")[0], hash: hashPassword(password) };
-  save(users);
+  if (!email.includes("@") || password.length < 8)
+    return { ok: false as const, error: "Enter a valid email and an 8+ character password." };
+  const res = await putUser({ email, name: name || email.split("@")[0], hash: hashPassword(password) });
+  if (!res.ok)
+    return {
+      ok: false as const,
+      error: res.error === "exists" ? "An account with that email already exists." : "Could not create the account. Please try again.",
+    };
   return { ok: true as const, token: sign(email), email };
 }
 
-export function signIn(email: string, password: string) {
+export async function signIn(email: string, password: string) {
   email = email.trim().toLowerCase();
-  const users = load();
-  const u = users[email];
+  const u = await fetchUser(email);
   if (!u || !verifyPassword(password, u.hash)) return { ok: false as const, error: "Wrong email or password." };
   return { ok: true as const, token: sign(email), email };
 }

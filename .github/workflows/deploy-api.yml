@@ -1,0 +1,59 @@
+name: Deploy backend (Cloud Run)
+
+# Builds the FastAPI + LangGraph backend image (Dockerfile, bundled redis-stack) and deploys a
+# new Cloud Run revision on every push to main that touches backend code.
+#
+# Required repo secrets (set via `gh secret set`):
+#   GCP_SA_KEY        — JSON key for a deploy service account with roles/run.admin,
+#                       roles/cloudbuild.builds.editor, roles/artifactregistry.writer,
+#                       roles/iam.serviceAccountUser, roles/storage.admin.
+#   BACKEND_ENV_YAML  — the full Cloud Run env file (the contents of env.yaml: every DT_/GITLAB_/
+#                       MDB_/ELASTIC_/PHOENIX_/GOOGLE_ key, GOOGLE_GENAI_USE_VERTEXAI=true, no
+#                       GOOGLE_API_KEY). Written to disk at deploy time, never committed.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app.py"
+      - "agents/**"
+      - "orchestrator/**"
+      - "hivemind/**"
+      - "requirements.txt"
+      - "Dockerfile"
+      - "deploy/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: hivemind-hackathon
+  REGION: us-central1
+  SERVICE: hivemind-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+      - name: Write Cloud Run env file
+        run: printf '%s' "${{ secrets.BACKEND_ENV_YAML }}" > env.yaml
+      - name: Deploy
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --source . \
+            --region "$REGION" \
+            --project "$PROJECT_ID" \
+            --env-vars-file env.yaml \
+            --memory 4Gi --cpu 2 \
+            --min-instances 1 --max-instances 1 \
+            --concurrency 40 --timeout 3600 \
+            --no-cpu-throttling \
+            --allow-unauthenticated \
+            --port 8080 \
+            --quiet

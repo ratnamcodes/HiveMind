@@ -33,6 +33,7 @@ from mcp import StdioServerParameters
 from pydantic import BaseModel, Field
 
 from hivemind.limiter import tool_call_budget
+from hivemind.mcp_env import mcp_env
 from hivemind.memory import Severity
 
 load_dotenv()
@@ -115,11 +116,11 @@ fivetran_tools = McpToolset(
         server_params=StdioServerParameters(
             command="uvx",
             args=["--from", "git+https://github.com/fivetran/fivetran-mcp", "fivetran-mcp"],
-            env={
-                "FIVETRAN_API_KEY": os.environ["FIVETRAN_API_KEY"],
-                "FIVETRAN_API_SECRET": os.environ["FIVETRAN_API_SECRET"],
-                "FIVETRAN_ALLOW_WRITES": os.environ.get("FIVETRAN_ALLOW_WRITES", "true"),
-            },
+            env=mcp_env(
+                FIVETRAN_API_KEY=os.environ["FIVETRAN_API_KEY"],
+                FIVETRAN_API_SECRET=os.environ["FIVETRAN_API_SECRET"],
+                FIVETRAN_ALLOW_WRITES=os.environ.get("FIVETRAN_ALLOW_WRITES", "true"),
+            ),
         ),
         timeout=120.0,  # uvx builds from git on first run
     ),

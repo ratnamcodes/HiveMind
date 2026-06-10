@@ -33,6 +33,11 @@ try:
     from phoenix.otel import register
 
     _endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "http://localhost:6006")
+    # Skip tracing when there's no reachable collector (e.g. a cloud deploy with no Phoenix):
+    # otherwise the batch exporter retries localhost:6006 forever and floods the logs. The
+    # Reviewer simply falls back to its default rubric, exactly as it does today.
+    if os.getenv("PHOENIX_DISABLE", "").lower() in ("1", "true", "yes") or not _endpoint:
+        raise RuntimeError("Phoenix tracing disabled (PHOENIX_DISABLE set or no endpoint)")
     _tracer_provider = register(
         endpoint=f"{_endpoint.rstrip('/')}/v1/traces",
         project_name=os.getenv("PHOENIX_PROJECT", "hivemind"),

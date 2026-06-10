@@ -14,6 +14,7 @@ from mcp import StdioServerParameters
 from pydantic import BaseModel, Field
 
 from hivemind.limiter import tool_call_budget
+from hivemind.mcp_env import mcp_env
 from hivemind.memory import Severity
 
 load_dotenv()
@@ -66,13 +67,11 @@ dynatrace_tools = McpToolset(
         server_params=StdioServerParameters(
             command="npx",
             args=["-y", "@dynatrace-oss/dynatrace-mcp-server@latest"],
-            env={
-                "DT_ENVIRONMENT": os.environ["DT_ENVIRONMENT"].replace(
-                    ".live.", ".apps."
-                ),
-                "DT_PLATFORM_TOKEN": os.environ["DT_PLATFORM_TOKEN"],
-                "DT_MCP_DISABLE_TELEMETRY": "true",
-            },
+            env=mcp_env(
+                DT_ENVIRONMENT=os.environ["DT_ENVIRONMENT"].replace(".live.", ".apps."),
+                DT_PLATFORM_TOKEN=os.environ["DT_PLATFORM_TOKEN"],
+                DT_MCP_DISABLE_TELEMETRY="true",
+            ),
         ),
         # Davis CoPilot tools (nl2dql, analyzers, copilot chat) are LLM-backed and
         # routinely take >5s; ADK's default 5s MCP request timeout was killing

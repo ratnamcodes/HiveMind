@@ -28,6 +28,7 @@ import asyncio
 import json
 import os
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Literal, TypedDict
 
@@ -66,6 +67,35 @@ MAX_REVISIONS = 2
 AGENT_TIMEOUT = 240.0
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 _tracer = otel_trace.get_tracer("hivemind.orchestrator")
+
+# Fallback checkpointer. The Redis checkpointer (preferred) needs the RediSearch module
+# (FT.CREATE / FT._LIST). If the deployment ships plain redis-server, asetup() raises
+# "unknown command FT._LIST" and the whole run crashes. This in-process MemorySaver lets a
+# run degrade instead. On a single-instance deploy (Cloud Run minScale=maxScale=1) it still
+# survives the pause -> approve -> resume hop, because every request runs in the same process.
+_MEM_SAVER = MemorySaver()
+
+
+@asynccontextmanager
+async def _checkpointer(redis_url: str):
+    """Yield a LangGraph checkpointer: Redis if its RediSearch module is present, else the
+    in-process MemorySaver. Setup failures fall back; consumer-body errors propagate normally."""
+    cm = AsyncRedisSaver.from_conn_string(redis_url)
+    try:
+        cp = await cm.__aenter__()
+        await cp.asetup()  # idempotent RediSearch index creation; raises if the module is absent
+    except Exception as exc:  # noqa: BLE001
+        try:
+            await cm.__aexit__(None, None, None)
+        except Exception:  # noqa: BLE001
+            pass
+        print(f"[checkpointer] Redis unavailable ({exc}); using in-process MemorySaver", flush=True)
+        yield _MEM_SAVER
+        return
+    try:
+        yield cp
+    finally:
+        await cm.__aexit__(None, None, None)
 
 DETECTIVE, LOG_DIVER, CODE_ARCH, LIAISON = (
     "detective",
@@ -280,17 +310,23 @@ async def _apply_fix_and_verify_recovery(state: OrchestratorState) -> str | None
                 lines = ["downstream_delay_ms: 0" if l.strip().startswith("downstream_delay_ms") else l for l in lines]
                 open(cfg, "w").write("\n".join(lines) + "\n")
             fix_t0 = _t.time()  # the moment the fix shipped — SRG validates only the window AFTER this
+            # The instrumented app to re-poll for recovery. Local dev runs it on :3100; in the
+            # cloud there's no local app, so RECOVERY_APP_URL stays unset and we skip straight to
+            # the Dynatrace proof below instead of bailing out.
+            app_url = (_os.getenv("RECOVERY_APP_URL") or "http://localhost:3100").rstrip("/")
             lat: list[int] = []
             for _ in range(8):  # verify recovery from real latency (+ generate fresh post-fix logs)
                 try:
-                    lat.append(int(_rq.get("http://localhost:3100/checkout", timeout=5).json().get("latency_ms", 999)))
+                    lat.append(int(_rq.get(f"{app_url}/checkout", timeout=5).json().get("latency_ms", 999)))
                 except Exception:  # noqa: BLE001
                     pass
                 _t.sleep(1)
-            if not lat:
-                return None
-            msg = (f"Recovery verified on live telemetry: checkout latency back to "
-                   f"~{int(statistics.median(lat))}ms (peak {max(lat)}ms) — SLO restored, service healthy.")
+            if lat:
+                msg = (f"Recovery verified on live telemetry: checkout latency back to "
+                       f"~{int(statistics.median(lat))}ms (peak {max(lat)}ms). SLO restored, service healthy.")
+            else:
+                # No local app to poll (cloud deploy) — confirm recovery from Dynatrace data alone.
+                msg = "Fix applied and redeployed. Confirming recovery against live Dynatrace data."
             # Prove it in REAL Dynatrace data: poll Grail until the post-fix latency lands (ingest lag).
             try:
                 for _ in range(6):  # up to ~60s for OTLP logs to reach Grail
@@ -311,7 +347,7 @@ async def _apply_fix_and_verify_recovery(state: OrchestratorState) -> str | None
                     _t.sleep(5)
                 verdict = dt.srg_validate(slo, 1)
                 if verdict:
-                    msg += (f" Site Reliability Guardian — objective 'checkout latency ≤ {slo}ms': "
+                    msg += (f" Site Reliability Guardian checked 'checkout latency ≤ {slo}ms': "
                             f"{verdict[0]} ({verdict[1]}ms).")
             except Exception:  # noqa: BLE001
                 pass
@@ -414,7 +450,7 @@ async def code_arch_node(state: OrchestratorState) -> dict:
     # service can otherwise pull it to the wrong one). CodeArch still reads + patches for real.
     _target = state["alert_payload"].get("code_target")
     if _target:
-        _q = f"{_q} The fix belongs in the file `{_target}` — read that exact path and patch it."
+        _q = f"{_q} The fix belongs in the file `{_target}`. Read that exact path and patch it."
     req = CodeSearchRequest(
         channel_id=state["channel_id"],
         question=_q,
@@ -569,7 +605,7 @@ async def approval_gate_node(state: OrchestratorState) -> dict:
     crew_note = {
         "approve": "The crew investigated and its Reviewer is confident in this fix.",
         "revise": "The crew drafted this fix; its Reviewer flagged it for a second look first.",
-        "escalate": "The crew drafted this fix but its Reviewer wasn't fully confident — your call.",
+        "escalate": "The crew drafted this fix but its Reviewer wasn't fully confident. Your call.",
     }.get(verdict, "The crew drafted this fix.")
     payload = {
         "decision_id": decision_id,
@@ -598,7 +634,7 @@ async def approval_gate_node(state: OrchestratorState) -> dict:
 
     choice = (decision or {}).get("choice", "approve") if isinstance(decision, dict) else str(decision or "approve")
     feedback = (decision or {}).get("feedback", "") if isinstance(decision, dict) else ""
-    detail = {"approve": "Approved by a human — fix is cleared to ship.",
+    detail = {"approve": "Approved by a human. The fix is cleared to ship.",
               "changes": f"Human requested changes: {feedback or 'see thread'}.",
               "escalate": "Escalated to a human on-call."}.get(choice, "Decided.")
     await _emit(state, events.decision_made(cid, decision_id, choice, detail))
@@ -728,8 +764,7 @@ class OrchestratorRunner:
         # (not a checkpoint-resume) while keeping incident_id stable for the MR/evaluator.
         config = {"configurable": {"thread_id": alert_payload.get("thread_id") or incident_id}}
 
-        async with AsyncRedisSaver.from_conn_string(self._redis_url) as cp:
-            await cp.asetup()  # idempotent RediSearch index creation
+        async with _checkpointer(self._redis_url) as cp:
             graph = build_graph(cp)
             with _tracer.start_as_current_span("incident") as span:
                 trace_id = format(span.get_span_context().trace_id, "032x")
@@ -808,8 +843,7 @@ class OrchestratorRunner:
         graph from the Redis checkpoint via Command(resume=decision); the gate node's interrupt()
         returns `decision`, the run finalizes, and the complete event fires. No agents re-run."""
         config = {"configurable": {"thread_id": incident_id}}
-        async with AsyncRedisSaver.from_conn_string(self._redis_url) as cp:
-            await cp.asetup()
+        async with _checkpointer(self._redis_url) as cp:
             graph = build_graph(cp)
             with _tracer.start_as_current_span("incident.resume") as span:
                 span.set_attribute("hivemind.incident_id", incident_id)

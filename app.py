@@ -294,7 +294,7 @@ async def dynatrace_webhook(request: Request) -> dict:
         user_id,
         events.token(
             channel_id, "system", f"alert-{problem.problem_id}",
-            f"Dynatrace alert: {problem.title} — {problem.service} ({severity}). "
+            f"Dynatrace alert: {problem.title} on {problem.service} ({severity}). "
             f"Problem {problem.problem_id}. HiveMind is investigating…",
         ),
     )
@@ -393,3 +393,112 @@ async def app_incident(request: Request) -> dict:
         })
     )
     return {"status": "accepted", "channel_id": channel_id, "problem_id": pid}
+
+
+# --- talk to the crew: the war-room composer posts here ---------------------
+_CHAT_PERSONAS = {
+    "detective": "Detective, the root-cause specialist. You query real Dynatrace Grail data to find why a service broke.",
+    "log_diver": "LogDiver, the logs specialist. You pin a slowdown to the exact deploy from Elastic logs.",
+    "code_arch": "CodeArch. You write the smallest safe fix and open it as a GitLab merge request.",
+    "customer_liaison": "Liaison. You find which paying customers and how much revenue an incident puts at risk.",
+    "scribe": "Scribe. You write the incident record and recall whether we have seen something before.",
+    "reviewer": "Reviewer. You independently check a fix and prove the service recovered with a Dynatrace Site Reliability Guardian.",
+}
+
+
+async def _agent_chat_reply(user_id: str, channel_id: str, agent_id: str, text: str) -> None:
+    """A teammate messaged the crew in the war room. Reply briefly and in character, streamed back
+    over /ws so the channel feels alive. Best-effort: a model hiccup falls back to a plain reply."""
+    agent_id = agent_id if agent_id in _CHAT_PERSONAS else "detective"
+    mid = f"{agent_id}-chat-{os.urandom(3).hex()}"
+    await events.publish(user_id, events.status(channel_id, agent_id, "thinking"))
+    reply = ""
+    try:
+        from google import genai
+
+        client = genai.Client()  # inherits Vertex config from the environment
+        prompt = (
+            f"You are {_CHAT_PERSONAS[agent_id]} You are one of six specialists in HiveMind, an AI "
+            f"incident-response crew with a human in command. A teammate wrote in the team chat: "
+            f'"{text}". Reply in character, helpful and plain, 1 to 3 short sentences. '
+            f"No markdown, no preamble."
+        )
+        resp = await asyncio.to_thread(
+            lambda: client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
+        )
+        reply = (getattr(resp, "text", "") or "").strip()
+    except Exception:  # noqa: BLE001
+        reply = ""
+    if not reply:
+        reply = (
+            "I'm standing by. I jump in the moment Dynatrace flags a real problem on your service. "
+            "Trigger an incident and you'll see the whole crew work it end to end."
+        )
+    words = reply.split()
+    for i in range(0, len(words), 5):
+        await events.publish(
+            user_id, events.token(channel_id, agent_id, mid, " ".join(words[i : i + 5]) + " ")
+        )
+        await asyncio.sleep(0.04)
+    await events.publish(user_id, events.status(channel_id, agent_id, "done"))
+
+
+class ChatMsg(BaseModel):
+    channel_id: str = "ops"
+    text: str = ""
+    agent_id: str = ""
+
+
+@app.post("/api/chat")
+async def chat_in_channel(request: Request, msg: ChatMsg) -> dict:
+    """Composer entry point: route a teammate's message to the @mentioned agent (or Detective) for
+    a short, in-character reply that streams back into the channel over /ws."""
+    user_id = request.query_params.get("user") or events.DEFAULT_USER
+    if msg.text.strip():
+        asyncio.create_task(_agent_chat_reply(user_id, msg.channel_id, msg.agent_id, msg.text.strip()))
+    return {"status": "ok"}
+
+
+# --- Auth user store -------------------------------------------------------
+# The Next.js frontend (web/lib/session.ts) hashes the password with scrypt and uses these two
+# endpoints as its user store. Backed by Atlas, so accounts survive the frontend's serverless
+# cold starts (a file store on Vercel can't — its filesystem is ephemeral and read-only).
+class UserRecord(BaseModel):
+    email: str
+    name: str = ""
+    hash: str = ""
+
+
+@app.post("/api/users")
+async def create_user(rec: UserRecord) -> dict:
+    from hivemind.mongo_client import get_db
+
+    email = rec.email.strip().lower()
+    if not email or not rec.hash:
+        return {"ok": False, "error": "email and hash required"}
+    users = get_db()["users"]
+    if await users.find_one({"_id": email}):
+        return {"ok": False, "error": "exists"}
+    await users.insert_one({"_id": email, "email": email, "name": rec.name, "hash": rec.hash})
+    return {"ok": True}
+
+
+@app.get("/api/users/{email}")
+async def get_user(email: str) -> dict:
+    from hivemind.mongo_client import get_db
+
+    u = await get_db()["users"].find_one({"_id": email.strip().lower()})
+    if not u:
+        return {"found": False}
+    return {"found": True, "email": u["email"], "name": u.get("name", ""), "hash": u.get("hash", "")}
+
+
+@app.get("/api/health")
+async def api_health() -> dict[str, str]:
+    """Health probe on a non-reserved path. Cloud Run's Google Frontend shadows /healthz, so
+    external uptime checks should target this instead."""
+    try:
+        ok = await get_redis().ping()
+    except Exception:  # noqa: BLE001
+        ok = False
+    return {"status": "ok", "redis": "ok" if ok else "down"}

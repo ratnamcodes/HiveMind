@@ -24,7 +24,7 @@ export function ApprovalCard({ channelId }: { channelId: string }) {
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         <ShieldCheck className="h-4 w-4 shrink-0 text-blue-300" strokeWidth={2} />
         <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-200">
-          Paused — your call
+          Paused for you
         </span>
         <span className="ml-auto animate-pulse text-[11px] text-blue-300/80">
           nothing has shipped yet

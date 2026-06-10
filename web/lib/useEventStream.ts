@@ -19,13 +19,14 @@ let flushScheduled = false;
 function scheduleFlush(applyEvents: (evs: WarRoomEvent[]) => void): void {
   if (flushScheduled) return;
   flushScheduled = true;
-  const flush = () => {
+  // setTimeout (not requestAnimationFrame): a ~50ms window still collapses a burst into one
+  // render, but it keeps firing when the tab is backgrounded — rAF pauses there, which would
+  // freeze the war room until you switched back to it.
+  setTimeout(() => {
     flushScheduled = false;
     const batch = buffer.splice(0, buffer.length);
     if (batch.length) applyEvents(batch);
-  };
-  if (typeof requestAnimationFrame === "function") requestAnimationFrame(flush);
-  else setTimeout(flush, 16);
+  }, 50);
 }
 
 function wsUrl(): string {
