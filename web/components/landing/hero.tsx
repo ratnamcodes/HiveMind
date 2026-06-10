@@ -20,8 +20,11 @@ const TRUST = [
 
 export function Hero() {
   return (
-    <section aria-label="hero" className="relative">
-      <FadeContainer className="relative flex flex-col items-center justify-center px-4">
+    <section aria-label="hero" className="relative isolate">
+      <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+        <GameOfLife />
+      </div>
+      <FadeContainer className="relative z-10 flex flex-col items-center justify-center px-4">
         <FadeDiv className="mx-auto">
           <a href="#demo" className="group mx-auto w-full">
             <div className="inline-flex max-w-full items-center gap-3 rounded-full bg-white/60 px-2.5 py-0.5 pr-3 pl-0.5 font-medium text-gray-900 ring-1 shadow-lg shadow-amber-400/20 ring-black/10 backdrop-blur-[1px] transition-colors hover:bg-amber-500/5 sm:text-sm">
@@ -71,10 +74,6 @@ export function Hero() {
             ))}
           </div>
         </FadeDiv>
-
-        <div className="absolute inset-0 -top-20 -z-10 flex items-center justify-center">
-          <GameOfLife />
-        </div>
       </FadeContainer>
     </section>
   );

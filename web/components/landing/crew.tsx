@@ -36,6 +36,13 @@ const CREW: Member[] = [
   { icon: ShieldCheck, name: "Reviewer", partner: "Dynatrace SRG", Logo: DynatraceLogo, color: BRAND_COLOR.dynatrace, does: "Signs off on the fix, then confirms the service recovered." },
 ];
 
+// Solar's folded-corner "sticker" card — amber icon + tick, with the agent's real partner mark.
+const STICKER =
+  "relative z-10 block h-full w-full overflow-hidden rounded-lg rounded-tr-[26px] bg-white px-5 pt-5 pb-[18px] shadow-[inset_0_0_0_1px] shadow-gray-200 transition-all duration-200 ease-in-out " +
+  "before:absolute before:top-0 before:right-0 before:z-3 before:h-[30px] before:w-[30px] before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-gray-50 before:shadow-[0_1px_0_0] before:shadow-gray-200 before:transition-all before:duration-200 before:content-[''] " +
+  "after:absolute after:top-0 after:right-0 after:z-2 after:size-7 after:-translate-y-2 after:translate-x-2 after:rounded-bl-lg after:border after:border-gray-200 after:bg-gray-50 after:shadow-xs after:transition-all after:duration-200 after:content-[''] " +
+  "hover:rounded-tr-[45px] hover:before:h-[50px] hover:before:w-[50px] hover:after:h-[42px] hover:after:w-[42px] hover:after:shadow-lg hover:after:shadow-black/5";
+
 export function Crew() {
   return (
     <section id="crew" className="relative mx-auto max-w-6xl scroll-my-24 px-4 xl:px-0">
@@ -48,23 +55,24 @@ export function Crew() {
         </p>
       </Reveal>
 
-      <Reveal className="mt-10 grid grid-cols-1 gap-px overflow-hidden rounded-xl bg-gray-200 shadow-sm ring-1 ring-gray-200 sm:grid-cols-2 lg:grid-cols-3">
+      <Reveal className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {CREW.map((m) => {
           const Icon = m.icon;
           const Logo = m.Logo;
           return (
-            <div key={m.name} className="group flex flex-col gap-3 bg-white p-6 transition-colors hover:bg-gray-50">
-              <div className="flex items-center justify-between">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-gray-900 text-white shadow-sm">
-                  <Icon className="size-5" strokeWidth={2} />
-                </span>
-                <Logo className="size-6 opacity-90" style={{ color: m.color }} />
+            <div key={m.name} className="group relative">
+              <div className={STICKER}>
+                <div className="relative flex items-center gap-2.5">
+                  <span className="absolute -left-5 h-5 w-[3px] rounded-r-sm bg-amber-500" />
+                  <Icon className="size-5 shrink-0 text-amber-500" strokeWidth={2} />
+                  <h3 className="font-semibold text-gray-900">{m.name}</h3>
+                </div>
+                <div className="mt-2.5 flex items-center gap-1.5">
+                  <Logo className="size-4 shrink-0" style={{ color: m.color }} />
+                  <span className="font-mono text-[11px] tracking-wide text-gray-500 uppercase">{m.partner}</span>
+                </div>
+                <p className="mt-2.5 text-sm leading-relaxed text-gray-600">{m.does}</p>
               </div>
-              <div>
-                <div className="text-base font-semibold text-gray-900">{m.name}</div>
-                <div className="font-mono text-[11px] tracking-wide text-gray-400 uppercase">{m.partner}</div>
-              </div>
-              <p className="text-sm leading-relaxed text-gray-600">{m.does}</p>
             </div>
           );
         })}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useInView } from "motion/react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -13,8 +14,9 @@ import {
 import { AGENTS, AGENT_IDS } from "@/lib/agents";
 import { cn } from "@/lib/utils";
 
-// A big, read-only recreation of the real war room playing one incident from start to finish. It
-// auto-advances (and loops), pausing while you hover so you can read. Nothing calls the backend.
+// A read-only recreation of the real war room playing one incident from start to finish. It begins
+// when it scrolls into view, plays through exactly ONCE, and then rests on the resolved state — no
+// looping. A Replay control lets you watch it again. Nothing calls the backend.
 
 type AgentKey = keyof typeof AGENTS;
 
@@ -35,21 +37,29 @@ const SCRIPT: Beat[] = [
   { t: "resolved" },
 ];
 
-const DUR: Record<Beat["t"], number> = { agent: 1500, approve: 1400, recovery: 2200, resolved: 2400 };
+// Dwell time AFTER a beat appears, before the next one is revealed.
+const DUR: Record<Beat["t"], number> = { agent: 1350, approve: 1300, recovery: 1900, resolved: 2200 };
+const START_DELAY = 650;
 
 export function LandingWarRoom() {
-  const [n, setN] = useState(1);
-  const [paused, setPaused] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef, { once: true, margin: "-120px 0px -120px 0px" });
 
+  // `n` = number of beats revealed (0 = only the incident brief).
+  const [n, setN] = useState(0);
+  const done = n >= SCRIPT.length;
+
+  // Advance one beat at a time, once in view, then stop at the end.
   useEffect(() => {
-    if (paused) return;
-    const beat = SCRIPT[Math.min(n - 1, SCRIPT.length - 1)];
-    const wait = n >= SCRIPT.length ? 2800 : DUR[beat.t];
-    const id = setTimeout(() => setN((x) => (x >= SCRIPT.length ? 1 : x + 1)), wait);
+    if (!inView || done) return;
+    const justShown = n === 0 ? null : SCRIPT[n - 1];
+    const wait = justShown ? DUR[justShown.t] : START_DELAY;
+    const id = setTimeout(() => setN((x) => Math.min(x + 1, SCRIPT.length)), wait);
     return () => clearTimeout(id);
-  }, [n, paused]);
+  }, [inView, n, done]);
 
+  // Keep the newest line in view as the feed fills.
   useEffect(() => {
     const el = feedRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
@@ -57,14 +67,12 @@ export function LandingWarRoom() {
 
   const shown = SCRIPT.slice(0, n);
   const next = SCRIPT[n];
-  const done = n >= SCRIPT.length && SCRIPT[n - 1]?.t === "resolved";
   const mrShown = shown.some((b) => b.t === "agent" && b.chip);
   const recovered = shown.some((b) => b.t === "recovery" || b.t === "resolved");
 
   return (
     <div
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      ref={rootRef}
       className="overflow-hidden rounded-xl border border-white/10 bg-[#0b0d10] text-zinc-100 shadow-2xl shadow-black/30 ring-1 ring-black/5"
     >
       {/* window chrome */}
@@ -77,9 +85,18 @@ export function LandingWarRoom() {
         <span className="ml-2 flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-zinc-200">
           <Hexagon className="h-3.5 w-3.5 text-amber-400" strokeWidth={2.5} fill="currentColor" /> HiveMind War Room
         </span>
-        <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-zinc-400">
-          <Live /> {paused ? "Paused" : "Replaying a real incident"}
-        </span>
+        {done ? (
+          <button
+            onClick={() => setN(0)}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-white"
+          >
+            <ReplayIcon /> Replay
+          </button>
+        ) : (
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-zinc-400">
+            <Live /> Replaying a real incident
+          </span>
+        )}
       </div>
 
       <div className="flex h-[520px] sm:h-[600px]">
@@ -178,6 +195,15 @@ function Live() {
   );
 }
 
+function ReplayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+
 function SideGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-3">
@@ -272,7 +298,7 @@ function LiveBar({ next }: { next?: Beat }) {
     label = "Shipping the fix and checking recovery";
   }
   return (
-    <div className="mt-auto flex shrink-0 items-center gap-2.5 rounded-md border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2">
+    <div className="flex shrink-0 items-center gap-2.5 rounded-md border border-amber-400/20 bg-amber-400/[0.05] px-3 py-2">
       <span className="relative flex h-2 w-2 shrink-0">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/70" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
