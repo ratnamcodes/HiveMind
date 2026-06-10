@@ -4,16 +4,13 @@ export const alt = "HiveMind · AI that fixes your incidents end to end";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// A hive hexagon as a data-URI SVG so it renders reliably in the OG image renderer.
+// The hexagon badge as a data-URI SVG so it renders reliably in the OG image renderer.
 const HEX = `data:image/svg+xml;utf8,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 24 24">
-    <defs><linearGradient id="g" x1="4" y1="1" x2="20" y2="23" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FB923C"/><stop offset="0.55" stop-color="#F97316"/><stop offset="1" stop-color="#EA580C"/>
-    </linearGradient></defs>
-    <path d="M12 1.2 21.36 6.6V17.4L12 22.8 2.64 17.4V6.6L12 1.2Z" fill="url(#g)"/>
-    <g stroke="#fff" stroke-width="1.1" stroke-linecap="round" opacity="0.95">
-      <path d="M9 9.2 15 9.2"/><path d="M9 9.2 12 15"/><path d="M15 9.2 12 15"/></g>
-    <g fill="#fff"><circle cx="9" cy="9.2" r="1.7"/><circle cx="15" cy="9.2" r="1.7"/><circle cx="12" cy="15" r="1.7"/></g>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 32 32">
+    <rect width="32" height="32" rx="7" fill="#18181B"/>
+    <g transform="translate(4 4)" fill="#FFFFFF">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    </g>
   </svg>`,
 )}`;
 
