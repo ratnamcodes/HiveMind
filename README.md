@@ -114,7 +114,7 @@ The frontend is Next.js on Vercel. The backend is FastAPI on Cloud Run with a bu
 
 ## Hackathon assets
 
-Shareable 3:2 thumbnails live in [`assets/`](assets/), including the primary HiveMind x Dynatrace card.
+Shareable media lives in [`assets/`](assets/): five 3:2 thumbnails (the primary card features Dynatrace), the [90-second launch video](assets/launch-video.mp4), and its [poster frame](assets/launch-video-poster.png).
 
 ## License
 
