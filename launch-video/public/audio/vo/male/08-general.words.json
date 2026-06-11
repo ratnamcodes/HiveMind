@@ -1,0 +1,132 @@
+{
+  "id": "08-general",
+  "text": "And checkout was just the demo. The same agents protect a bank's payments, a hospital's records, a game's launch night. Any system. Any incident. Anywhere.",
+  "durationMs": 11238,
+  "words": [
+    {
+      "text": "And",
+      "startMs": 0,
+      "endMs": 186
+    },
+    {
+      "text": "checkout",
+      "startMs": 255,
+      "endMs": 673
+    },
+    {
+      "text": "was",
+      "startMs": 731,
+      "endMs": 859
+    },
+    {
+      "text": "just",
+      "startMs": 917,
+      "endMs": 1115
+    },
+    {
+      "text": "the",
+      "startMs": 1161,
+      "endMs": 1231
+    },
+    {
+      "text": "demo.",
+      "startMs": 1289,
+      "endMs": 1846
+    },
+    {
+      "text": "The",
+      "startMs": 2159,
+      "endMs": 2287
+    },
+    {
+      "text": "same",
+      "startMs": 2345,
+      "endMs": 2647
+    },
+    {
+      "text": "agents",
+      "startMs": 2705,
+      "endMs": 3088
+    },
+    {
+      "text": "protect",
+      "startMs": 3135,
+      "endMs": 3495
+    },
+    {
+      "text": "a",
+      "startMs": 3553,
+      "endMs": 3587
+    },
+    {
+      "text": "bank's",
+      "startMs": 3669,
+      "endMs": 3959
+    },
+    {
+      "text": "payments,",
+      "startMs": 4017,
+      "endMs": 4586
+    },
+    {
+      "text": "a",
+      "startMs": 4632,
+      "endMs": 4702
+    },
+    {
+      "text": "hospital's",
+      "startMs": 4795,
+      "endMs": 5259
+    },
+    {
+      "text": "records,",
+      "startMs": 5341,
+      "endMs": 5979
+    },
+    {
+      "text": "a",
+      "startMs": 6246,
+      "endMs": 6327
+    },
+    {
+      "text": "game's",
+      "startMs": 6444,
+      "endMs": 6780
+    },
+    {
+      "text": "launch",
+      "startMs": 6873,
+      "endMs": 7221
+    },
+    {
+      "text": "night.",
+      "startMs": 7291,
+      "endMs": 7709
+    },
+    {
+      "text": "Any",
+      "startMs": 7976,
+      "endMs": 8231
+    },
+    {
+      "text": "system.",
+      "startMs": 8313,
+      "endMs": 8916
+    },
+    {
+      "text": "Any",
+      "startMs": 9230,
+      "endMs": 9462
+    },
+    {
+      "text": "incident.",
+      "startMs": 9520,
+      "endMs": 10194
+    },
+    {
+      "text": "Anywhere.",
+      "startMs": 10391,
+      "endMs": 11238
+    }
+  ]
+}

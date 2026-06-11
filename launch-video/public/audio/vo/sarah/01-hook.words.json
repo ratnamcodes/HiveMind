@@ -1,0 +1,82 @@
+{
+  "id": "01-hook",
+  "text": "It's 3 a.m., and a real store's checkout just died. Money's leaking. Customers are gone.",
+  "durationMs": 6641,
+  "words": [
+    {
+      "text": "It's",
+      "startMs": 0,
+      "endMs": 255
+    },
+    {
+      "text": "3",
+      "startMs": 313,
+      "endMs": 476
+    },
+    {
+      "text": "a.m.,",
+      "startMs": 546,
+      "endMs": 917
+    },
+    {
+      "text": "and",
+      "startMs": 940,
+      "endMs": 1080
+    },
+    {
+      "text": "a",
+      "startMs": 1149,
+      "endMs": 1173
+    },
+    {
+      "text": "real",
+      "startMs": 1289,
+      "endMs": 1579
+    },
+    {
+      "text": "store's",
+      "startMs": 1649,
+      "endMs": 1985
+    },
+    {
+      "text": "checkout",
+      "startMs": 2032,
+      "endMs": 2426
+    },
+    {
+      "text": "just",
+      "startMs": 2473,
+      "endMs": 2682
+    },
+    {
+      "text": "died.",
+      "startMs": 2740,
+      "endMs": 3262
+    },
+    {
+      "text": "Money's",
+      "startMs": 3576,
+      "endMs": 3913
+    },
+    {
+      "text": "leaking.",
+      "startMs": 3982,
+      "endMs": 4540
+    },
+    {
+      "text": "Customers",
+      "startMs": 4853,
+      "endMs": 5387
+    },
+    {
+      "text": "are",
+      "startMs": 5445,
+      "endMs": 5596
+    },
+    {
+      "text": "gone.",
+      "startMs": 5654,
+      "endMs": 6641
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "id": "01-problem",
+  "text": "Normally? A human gets paged. Stares at dashboards. Starts guessing.",
+  "durationMs": 5851,
+  "words": [
+    {
+      "text": "Normally?",
+      "startMs": 0,
+      "endMs": 731
+    },
+    {
+      "text": "A",
+      "startMs": 1068,
+      "endMs": 1149
+    },
+    {
+      "text": "human",
+      "startMs": 1231,
+      "endMs": 1521
+    },
+    {
+      "text": "gets",
+      "startMs": 1567,
+      "endMs": 1753
+    },
+    {
+      "text": "paged.",
+      "startMs": 1823,
+      "endMs": 2415
+    },
+    {
+      "text": "Stares",
+      "startMs": 2752,
+      "endMs": 3170
+    },
+    {
+      "text": "at",
+      "startMs": 3216,
+      "endMs": 3297
+    },
+    {
+      "text": "dashboards.",
+      "startMs": 3355,
+      "endMs": 4180
+    },
+    {
+      "text": "Starts",
+      "startMs": 4516,
+      "endMs": 4853
+    },
+    {
+      "text": "guessing.",
+      "startMs": 4911,
+      "endMs": 5851
+    }
+  ]
+}

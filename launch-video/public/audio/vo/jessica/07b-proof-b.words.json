@@ -1,0 +1,62 @@
+{
+  "id": "07b-proof-b",
+  "text": "1.2 seconds, down to three milliseconds — confirmed on live telemetry.",
+  "durationMs": 5248,
+  "words": [
+    {
+      "text": "1.2",
+      "startMs": 0,
+      "endMs": 673
+    },
+    {
+      "text": "seconds,",
+      "startMs": 789,
+      "endMs": 1382
+    },
+    {
+      "text": "down",
+      "startMs": 1451,
+      "endMs": 1660
+    },
+    {
+      "text": "to",
+      "startMs": 1707,
+      "endMs": 1765
+    },
+    {
+      "text": "three",
+      "startMs": 1811,
+      "endMs": 2032
+    },
+    {
+      "text": "milliseconds",
+      "startMs": 2067,
+      "endMs": 2810
+    },
+    {
+      "text": "—",
+      "startMs": 2972,
+      "endMs": 3019
+    },
+    {
+      "text": "confirmed",
+      "startMs": 3135,
+      "endMs": 3634
+    },
+    {
+      "text": "on",
+      "startMs": 3680,
+      "endMs": 3738
+    },
+    {
+      "text": "live",
+      "startMs": 3820,
+      "endMs": 4052
+    },
+    {
+      "text": "telemetry.",
+      "startMs": 4087,
+      "endMs": 5248
+    }
+  ]
+}

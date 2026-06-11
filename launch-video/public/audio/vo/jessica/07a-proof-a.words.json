@@ -1,0 +1,32 @@
+{
+  "id": "07a-proof-a",
+  "text": "Then... it proves it worked.",
+  "durationMs": 2461,
+  "words": [
+    {
+      "text": "Then...",
+      "startMs": 0,
+      "endMs": 592
+    },
+    {
+      "text": "it",
+      "startMs": 1010,
+      "endMs": 1138
+    },
+    {
+      "text": "proves",
+      "startMs": 1184,
+      "endMs": 1463
+    },
+    {
+      "text": "it",
+      "startMs": 1509,
+      "endMs": 1567
+    },
+    {
+      "text": "worked.",
+      "startMs": 1602,
+      "endMs": 2461
+    }
+  ]
+}

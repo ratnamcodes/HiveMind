@@ -1,0 +1,197 @@
+{
+  "id": "04-swarm",
+  "text": "Then the swarm fans out, in parallel. Liaison names the blast radius: seven customers, eighteen thousand dollars a month at risk. And CodeArch doesn't just find the bug. It opens the fix, as a real GitLab merge request.",
+  "durationMs": 15790,
+  "words": [
+    {
+      "text": "Then",
+      "startMs": 0,
+      "endMs": 174
+    },
+    {
+      "text": "the",
+      "startMs": 221,
+      "endMs": 290
+    },
+    {
+      "text": "swarm",
+      "startMs": 337,
+      "endMs": 697
+    },
+    {
+      "text": "fans",
+      "startMs": 766,
+      "endMs": 1126
+    },
+    {
+      "text": "out,",
+      "startMs": 1196,
+      "endMs": 1579
+    },
+    {
+      "text": "in",
+      "startMs": 1637,
+      "endMs": 1765
+    },
+    {
+      "text": "parallel.",
+      "startMs": 1834,
+      "endMs": 2426
+    },
+    {
+      "text": "Liaison",
+      "startMs": 3158,
+      "endMs": 3866
+    },
+    {
+      "text": "names",
+      "startMs": 3936,
+      "endMs": 4168
+    },
+    {
+      "text": "the",
+      "startMs": 4203,
+      "endMs": 4272
+    },
+    {
+      "text": "blast",
+      "startMs": 4307,
+      "endMs": 4598
+    },
+    {
+      "text": "radius:",
+      "startMs": 4667,
+      "endMs": 5306
+    },
+    {
+      "text": "seven",
+      "startMs": 5642,
+      "endMs": 6014
+    },
+    {
+      "text": "customers,",
+      "startMs": 6095,
+      "endMs": 6920
+    },
+    {
+      "text": "eighteen",
+      "startMs": 7105,
+      "endMs": 7512
+    },
+    {
+      "text": "thousand",
+      "startMs": 7570,
+      "endMs": 7906
+    },
+    {
+      "text": "dollars",
+      "startMs": 7941,
+      "endMs": 8231
+    },
+    {
+      "text": "a",
+      "startMs": 8278,
+      "endMs": 8301
+    },
+    {
+      "text": "month",
+      "startMs": 8359,
+      "endMs": 8545
+    },
+    {
+      "text": "at",
+      "startMs": 8591,
+      "endMs": 8661
+    },
+    {
+      "text": "risk.",
+      "startMs": 8719,
+      "endMs": 9183
+    },
+    {
+      "text": "And",
+      "startMs": 9520,
+      "endMs": 9671
+    },
+    {
+      "text": "CodeArch",
+      "startMs": 9752,
+      "endMs": 10240
+    },
+    {
+      "text": "doesn't",
+      "startMs": 10286,
+      "endMs": 10530
+    },
+    {
+      "text": "just",
+      "startMs": 10565,
+      "endMs": 10716
+    },
+    {
+      "text": "find",
+      "startMs": 10762,
+      "endMs": 10971
+    },
+    {
+      "text": "the",
+      "startMs": 11006,
+      "endMs": 11076
+    },
+    {
+      "text": "bug.",
+      "startMs": 11122,
+      "endMs": 11598
+    },
+    {
+      "text": "It",
+      "startMs": 11935,
+      "endMs": 12086
+    },
+    {
+      "text": "opens",
+      "startMs": 12156,
+      "endMs": 12504
+    },
+    {
+      "text": "the",
+      "startMs": 12562,
+      "endMs": 12643
+    },
+    {
+      "text": "fix,",
+      "startMs": 12713,
+      "endMs": 13282
+    },
+    {
+      "text": "as",
+      "startMs": 13317,
+      "endMs": 13491
+    },
+    {
+      "text": "a",
+      "startMs": 13549,
+      "endMs": 13584
+    },
+    {
+      "text": "real",
+      "startMs": 13712,
+      "endMs": 13955
+    },
+    {
+      "text": "GitLab",
+      "startMs": 14025,
+      "endMs": 14431
+    },
+    {
+      "text": "merge",
+      "startMs": 14501,
+      "endMs": 14745
+    },
+    {
+      "text": "request.",
+      "startMs": 14791,
+      "endMs": 15790
+    }
+  ]
+}

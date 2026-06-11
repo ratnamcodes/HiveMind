@@ -1,0 +1,52 @@
+{
+  "id": "02-reveal",
+  "text": "HiveMind puts six AI specialists on the case instead.",
+  "durationMs": 3901,
+  "words": [
+    {
+      "text": "HiveMind",
+      "startMs": 0,
+      "endMs": 615
+    },
+    {
+      "text": "puts",
+      "startMs": 673,
+      "endMs": 882
+    },
+    {
+      "text": "six",
+      "startMs": 929,
+      "endMs": 1242
+    },
+    {
+      "text": "AI",
+      "startMs": 1370,
+      "endMs": 1753
+    },
+    {
+      "text": "specialists",
+      "startMs": 1811,
+      "endMs": 2403
+    },
+    {
+      "text": "on",
+      "startMs": 2450,
+      "endMs": 2519
+    },
+    {
+      "text": "the",
+      "startMs": 2554,
+      "endMs": 2624
+    },
+    {
+      "text": "case",
+      "startMs": 2659,
+      "endMs": 2891
+    },
+    {
+      "text": "instead.",
+      "startMs": 2926,
+      "endMs": 3901
+    }
+  ]
+}

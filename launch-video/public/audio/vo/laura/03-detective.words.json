@@ -1,0 +1,137 @@
+{
+  "id": "03-detective",
+  "text": "Detective taps straight into Dynatrace. It writes real Grail queries, verifies them, runs them. And finds the root cause: a hidden 1.2 second delay inside payment-service.",
+  "durationMs": 12028,
+  "words": [
+    {
+      "text": "Detective",
+      "startMs": 0,
+      "endMs": 546
+    },
+    {
+      "text": "taps",
+      "startMs": 569,
+      "endMs": 871
+    },
+    {
+      "text": "straight",
+      "startMs": 894,
+      "endMs": 1161
+    },
+    {
+      "text": "into",
+      "startMs": 1184,
+      "endMs": 1324
+    },
+    {
+      "text": "Dynatrace.",
+      "startMs": 1382,
+      "endMs": 2218
+    },
+    {
+      "text": "It",
+      "startMs": 2392,
+      "endMs": 2531
+    },
+    {
+      "text": "writes",
+      "startMs": 2566,
+      "endMs": 2856
+    },
+    {
+      "text": "real",
+      "startMs": 2984,
+      "endMs": 3239
+    },
+    {
+      "text": "Grail",
+      "startMs": 3309,
+      "endMs": 3564
+    },
+    {
+      "text": "queries,",
+      "startMs": 3622,
+      "endMs": 4272
+    },
+    {
+      "text": "verifies",
+      "startMs": 4342,
+      "endMs": 4853
+    },
+    {
+      "text": "them,",
+      "startMs": 4911,
+      "endMs": 5236
+    },
+    {
+      "text": "runs",
+      "startMs": 5387,
+      "endMs": 5642
+    },
+    {
+      "text": "them.",
+      "startMs": 5700,
+      "endMs": 6165
+    },
+    {
+      "text": "And",
+      "startMs": 6664,
+      "endMs": 6815
+    },
+    {
+      "text": "finds",
+      "startMs": 6873,
+      "endMs": 7163
+    },
+    {
+      "text": "the",
+      "startMs": 7221,
+      "endMs": 7291
+    },
+    {
+      "text": "root",
+      "startMs": 7338,
+      "endMs": 7523
+    },
+    {
+      "text": "cause:",
+      "startMs": 7581,
+      "endMs": 8139
+    },
+    {
+      "text": "a",
+      "startMs": 8255,
+      "endMs": 8324
+    },
+    {
+      "text": "hidden",
+      "startMs": 8406,
+      "endMs": 8661
+    },
+    {
+      "text": "1.2",
+      "startMs": 8731,
+      "endMs": 9404
+    },
+    {
+      "text": "second",
+      "startMs": 9485,
+      "endMs": 9764
+    },
+    {
+      "text": "delay",
+      "startMs": 9810,
+      "endMs": 10089
+    },
+    {
+      "text": "inside",
+      "startMs": 10136,
+      "endMs": 10472
+    },
+    {
+      "text": "payment-service.",
+      "startMs": 10507,
+      "endMs": 12028
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "id": "06-gate",
+  "text": "Here's the part I love. A Reviewer tears it apart and pushes back. But nothing ships until you say go.",
+  "durationMs": 6316,
+  "words": [
+    {
+      "text": "Here's",
+      "startMs": 0,
+      "endMs": 302
+    },
+    {
+      "text": "the",
+      "startMs": 337,
+      "endMs": 406
+    },
+    {
+      "text": "part",
+      "startMs": 453,
+      "endMs": 708
+    },
+    {
+      "text": "I",
+      "startMs": 766,
+      "endMs": 801
+    },
+    {
+      "text": "love.",
+      "startMs": 917,
+      "endMs": 1242
+    },
+    {
+      "text": "A",
+      "startMs": 1602,
+      "endMs": 1683
+    },
+    {
+      "text": "Reviewer",
+      "startMs": 1765,
+      "endMs": 2113
+    },
+    {
+      "text": "tears",
+      "startMs": 2148,
+      "endMs": 2380
+    },
+    {
+      "text": "it",
+      "startMs": 2426,
+      "endMs": 2496
+    },
+    {
+      "text": "apart",
+      "startMs": 2543,
+      "endMs": 2879
+    },
+    {
+      "text": "and",
+      "startMs": 2937,
+      "endMs": 3042
+    },
+    {
+      "text": "pushes",
+      "startMs": 3100,
+      "endMs": 3413
+    },
+    {
+      "text": "back.",
+      "startMs": 3483,
+      "endMs": 3866
+    },
+    {
+      "text": "But",
+      "startMs": 4063,
+      "endMs": 4238
+    },
+    {
+      "text": "nothing",
+      "startMs": 4296,
+      "endMs": 4609
+    },
+    {
+      "text": "ships",
+      "startMs": 4667,
+      "endMs": 4969
+    },
+    {
+      "text": "until",
+      "startMs": 5027,
+      "endMs": 5283
+    },
+    {
+      "text": "you",
+      "startMs": 5329,
+      "endMs": 5399
+    },
+    {
+      "text": "say",
+      "startMs": 5457,
+      "endMs": 5619
+    },
+    {
+      "text": "go.",
+      "startMs": 5677,
+      "endMs": 6316
+    }
+  ]
+}

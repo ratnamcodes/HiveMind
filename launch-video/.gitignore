@@ -1,0 +1,7 @@
+node_modules/
+out/
+analysis/
+tools/
+public/audio/candidates/
+public/audio/raw/
+.DS_Store

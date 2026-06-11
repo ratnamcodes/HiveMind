@@ -1,0 +1,107 @@
+{
+  "id": "00-intro",
+  "text": "Hey, I'm Ratnam. This is HiveMind — my build for the Google Cloud Rapid Agent Hackathon, Dynatrace track. Watch this.",
+  "durationMs": 7523,
+  "words": [
+    {
+      "text": "Hey,",
+      "startMs": 0,
+      "endMs": 464
+    },
+    {
+      "text": "I'm",
+      "startMs": 580,
+      "endMs": 755
+    },
+    {
+      "text": "Ratnam.",
+      "startMs": 801,
+      "endMs": 1335
+    },
+    {
+      "text": "This",
+      "startMs": 1393,
+      "endMs": 1579
+    },
+    {
+      "text": "is",
+      "startMs": 1637,
+      "endMs": 1707
+    },
+    {
+      "text": "HiveMind",
+      "startMs": 1776,
+      "endMs": 2357
+    },
+    {
+      "text": "—",
+      "startMs": 2473,
+      "endMs": 2554
+    },
+    {
+      "text": "my",
+      "startMs": 2670,
+      "endMs": 2798
+    },
+    {
+      "text": "build",
+      "startMs": 2856,
+      "endMs": 3077
+    },
+    {
+      "text": "for",
+      "startMs": 3123,
+      "endMs": 3216
+    },
+    {
+      "text": "the",
+      "startMs": 3251,
+      "endMs": 3320
+    },
+    {
+      "text": "Google",
+      "startMs": 3367,
+      "endMs": 3715
+    },
+    {
+      "text": "Cloud",
+      "startMs": 3750,
+      "endMs": 4075
+    },
+    {
+      "text": "Rapid",
+      "startMs": 4156,
+      "endMs": 4470
+    },
+    {
+      "text": "Agent",
+      "startMs": 4516,
+      "endMs": 4818
+    },
+    {
+      "text": "Hackathon,",
+      "startMs": 4865,
+      "endMs": 5468
+    },
+    {
+      "text": "Dynatrace",
+      "startMs": 5584,
+      "endMs": 6177
+    },
+    {
+      "text": "track.",
+      "startMs": 6211,
+      "endMs": 6641
+    },
+    {
+      "text": "Watch",
+      "startMs": 6838,
+      "endMs": 7082
+    },
+    {
+      "text": "this.",
+      "startMs": 7140,
+      "endMs": 7523
+    }
+  ]
+}

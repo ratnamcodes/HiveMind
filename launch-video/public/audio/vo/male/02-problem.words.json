@@ -1,0 +1,87 @@
+{
+  "id": "02-problem",
+  "text": "Normally? A human wakes up to stare at dashboards and guess. We can do way better.",
+  "durationMs": 6177,
+  "words": [
+    {
+      "text": "Normally?",
+      "startMs": 0,
+      "endMs": 743
+    },
+    {
+      "text": "A",
+      "startMs": 1057,
+      "endMs": 1138
+    },
+    {
+      "text": "human",
+      "startMs": 1219,
+      "endMs": 1602
+    },
+    {
+      "text": "wakes",
+      "startMs": 1672,
+      "endMs": 1974
+    },
+    {
+      "text": "up",
+      "startMs": 2032,
+      "endMs": 2159
+    },
+    {
+      "text": "to",
+      "startMs": 2218,
+      "endMs": 2287
+    },
+    {
+      "text": "stare",
+      "startMs": 2357,
+      "endMs": 2682
+    },
+    {
+      "text": "at",
+      "startMs": 2717,
+      "endMs": 2810
+    },
+    {
+      "text": "dashboards",
+      "startMs": 2868,
+      "endMs": 3553
+    },
+    {
+      "text": "and",
+      "startMs": 3750,
+      "endMs": 3982
+    },
+    {
+      "text": "guess.",
+      "startMs": 4075,
+      "endMs": 4563
+    },
+    {
+      "text": "We",
+      "startMs": 4679,
+      "endMs": 4818
+    },
+    {
+      "text": "can",
+      "startMs": 4876,
+      "endMs": 5027
+    },
+    {
+      "text": "do",
+      "startMs": 5097,
+      "endMs": 5213
+    },
+    {
+      "text": "way",
+      "startMs": 5294,
+      "endMs": 5492
+    },
+    {
+      "text": "better.",
+      "startMs": 5561,
+      "endMs": 6177
+    }
+  ]
+}

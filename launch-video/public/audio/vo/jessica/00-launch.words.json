@@ -1,0 +1,32 @@
+{
+  "id": "00-launch",
+  "text": "Hey — this is HiveMind.",
+  "durationMs": 2508,
+  "words": [
+    {
+      "text": "Hey",
+      "startMs": 0,
+      "endMs": 302
+    },
+    {
+      "text": "—",
+      "startMs": 534,
+      "endMs": 743
+    },
+    {
+      "text": "this",
+      "startMs": 940,
+      "endMs": 1091
+    },
+    {
+      "text": "is",
+      "startMs": 1138,
+      "endMs": 1207
+    },
+    {
+      "text": "HiveMind.",
+      "startMs": 1254,
+      "endMs": 2508
+    }
+  ]
+}

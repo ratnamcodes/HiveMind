@@ -1,0 +1,137 @@
+{
+  "id": "04-detective",
+  "text": "Before you'd even log in, Detective's already in Dynatrace, writing its own queries — and it nails it. A hidden, 1.2-second delay in the payment service.",
+  "durationMs": 10635,
+  "words": [
+    {
+      "text": "Before",
+      "startMs": 0,
+      "endMs": 348
+    },
+    {
+      "text": "you'd",
+      "startMs": 383,
+      "endMs": 534
+    },
+    {
+      "text": "even",
+      "startMs": 569,
+      "endMs": 731
+    },
+    {
+      "text": "log",
+      "startMs": 789,
+      "endMs": 998
+    },
+    {
+      "text": "in,",
+      "startMs": 1091,
+      "endMs": 1370
+    },
+    {
+      "text": "Detective's",
+      "startMs": 1509,
+      "endMs": 2067
+    },
+    {
+      "text": "already",
+      "startMs": 2136,
+      "endMs": 2531
+    },
+    {
+      "text": "in",
+      "startMs": 2577,
+      "endMs": 2635
+    },
+    {
+      "text": "Dynatrace,",
+      "startMs": 2694,
+      "endMs": 3483
+    },
+    {
+      "text": "writing",
+      "startMs": 3750,
+      "endMs": 4145
+    },
+    {
+      "text": "its",
+      "startMs": 4203,
+      "endMs": 4331
+    },
+    {
+      "text": "own",
+      "startMs": 4389,
+      "endMs": 4551
+    },
+    {
+      "text": "queries",
+      "startMs": 4621,
+      "endMs": 5108
+    },
+    {
+      "text": "—",
+      "startMs": 5271,
+      "endMs": 5341
+    },
+    {
+      "text": "and",
+      "startMs": 5457,
+      "endMs": 5654
+    },
+    {
+      "text": "it",
+      "startMs": 5724,
+      "endMs": 5805
+    },
+    {
+      "text": "nails",
+      "startMs": 5875,
+      "endMs": 6177
+    },
+    {
+      "text": "it.",
+      "startMs": 6235,
+      "endMs": 6513
+    },
+    {
+      "text": "A",
+      "startMs": 6780,
+      "endMs": 6873
+    },
+    {
+      "text": "hidden,",
+      "startMs": 6989,
+      "endMs": 7500
+    },
+    {
+      "text": "1.2-second",
+      "startMs": 7639,
+      "endMs": 8673
+    },
+    {
+      "text": "delay",
+      "startMs": 8731,
+      "endMs": 9067
+    },
+    {
+      "text": "in",
+      "startMs": 9160,
+      "endMs": 9265
+    },
+    {
+      "text": "the",
+      "startMs": 9311,
+      "endMs": 9381
+    },
+    {
+      "text": "payment",
+      "startMs": 9416,
+      "endMs": 9764
+    },
+    {
+      "text": "service.",
+      "startMs": 9799,
+      "endMs": 10635
+    }
+  ]
+}

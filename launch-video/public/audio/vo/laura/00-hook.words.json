@@ -1,0 +1,87 @@
+{
+  "id": "00-hook",
+  "text": "This is a real SEV one. Checkout latency just blew through its SLO. Live, in production.",
+  "durationMs": 6455,
+  "words": [
+    {
+      "text": "This",
+      "startMs": 0,
+      "endMs": 221
+    },
+    {
+      "text": "is",
+      "startMs": 279,
+      "endMs": 372
+    },
+    {
+      "text": "a",
+      "startMs": 418,
+      "endMs": 453
+    },
+    {
+      "text": "real",
+      "startMs": 569,
+      "endMs": 871
+    },
+    {
+      "text": "SEV",
+      "startMs": 1022,
+      "endMs": 1382
+    },
+    {
+      "text": "one.",
+      "startMs": 1556,
+      "endMs": 1846
+    },
+    {
+      "text": "Checkout",
+      "startMs": 2055,
+      "endMs": 2426
+    },
+    {
+      "text": "latency",
+      "startMs": 2473,
+      "endMs": 2914
+    },
+    {
+      "text": "just",
+      "startMs": 2984,
+      "endMs": 3146
+    },
+    {
+      "text": "blew",
+      "startMs": 3181,
+      "endMs": 3390
+    },
+    {
+      "text": "through",
+      "startMs": 3425,
+      "endMs": 3634
+    },
+    {
+      "text": "its",
+      "startMs": 3669,
+      "endMs": 3762
+    },
+    {
+      "text": "SLO.",
+      "startMs": 3820,
+      "endMs": 4505
+    },
+    {
+      "text": "Live,",
+      "startMs": 4714,
+      "endMs": 5178
+    },
+    {
+      "text": "in",
+      "startMs": 5201,
+      "endMs": 5317
+    },
+    {
+      "text": "production.",
+      "startMs": 5399,
+      "endMs": 6455
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "id": "06-proof",
+  "text": "Then, it proves the fix worked. Twelve hundred milliseconds, down to three. Verified on live telemetry. Not vibes.",
+  "durationMs": 7198,
+  "words": [
+    {
+      "text": "Then,",
+      "startMs": 0,
+      "endMs": 418
+    },
+    {
+      "text": "it",
+      "startMs": 476,
+      "endMs": 592
+    },
+    {
+      "text": "proves",
+      "startMs": 639,
+      "endMs": 929
+    },
+    {
+      "text": "the",
+      "startMs": 987,
+      "endMs": 1057
+    },
+    {
+      "text": "fix",
+      "startMs": 1115,
+      "endMs": 1358
+    },
+    {
+      "text": "worked.",
+      "startMs": 1416,
+      "endMs": 1892
+    },
+    {
+      "text": "Twelve",
+      "startMs": 2171,
+      "endMs": 2461
+    },
+    {
+      "text": "hundred",
+      "startMs": 2485,
+      "endMs": 2705
+    },
+    {
+      "text": "milliseconds,",
+      "startMs": 2728,
+      "endMs": 3413
+    },
+    {
+      "text": "down",
+      "startMs": 3483,
+      "endMs": 3692
+    },
+    {
+      "text": "to",
+      "startMs": 3727,
+      "endMs": 3773
+    },
+    {
+      "text": "three.",
+      "startMs": 3831,
+      "endMs": 4272
+    },
+    {
+      "text": "Verified",
+      "startMs": 4389,
+      "endMs": 4923
+    },
+    {
+      "text": "on",
+      "startMs": 4957,
+      "endMs": 5027
+    },
+    {
+      "text": "live",
+      "startMs": 5085,
+      "endMs": 5294
+    },
+    {
+      "text": "telemetry.",
+      "startMs": 5317,
+      "endMs": 6002
+    },
+    {
+      "text": "Not",
+      "startMs": 6072,
+      "endMs": 6316
+    },
+    {
+      "text": "vibes.",
+      "startMs": 6351,
+      "endMs": 7198
+    }
+  ]
+}
