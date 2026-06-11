@@ -1,15 +1,7 @@
-"""Per-hop critic (T15-C): a fast gate after each specialist node.
+"""Per-hop critic: a fast mechanical gate after each specialist node.
 
-The spec frames this as a "fast thinking_level=minimal Gemini critic," but its three
-checks are all MECHANICAL:
-
-  - schema-valid   — does the output parse into the node's output schema?
-  - non-empty      — is there actually output?
-  - grounded       — did the agent make >= 1 tool call (vs hallucinating an answer)?
-
-So we run them as a free, instant code check (no Gemini call — strictly cheaper than the
-spec) and retry the agent once on failure, catching ungrounded/garbage output AT THE HOP
-instead of letting it ride all the way to the final Reviewer and waste downstream tokens.
+Checks that the output is schema-valid, non-empty, and grounded (at least one tool
+call). The caller retries the agent once on failure before proceeding.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-/** "2:32 PM" — Slack-style short time. Rendered client-side so locale matches. */
+/** "2:32 PM": Slack-style short time. Rendered client-side so locale matches. */
 export function formatTime(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 
-// Objects orbiting a center mark (ported from the Solar template). Used for the "it catches the
-// problem" illustration — partner systems circling the hive.
+// Objects orbiting a center mark (ported from the Solar template).
 interface OrbitProps {
   radiusPx?: number;
   children: ReactNode;

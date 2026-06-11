@@ -1,4 +1,4 @@
-# CI evals gate — setup checklist (T18-B)
+# CI evals gate: setup checklist
 
 `.github/workflows/evals.yml` runs the **live** orchestrator, so it needs (1) Vertex auth and
 (2) the partner secrets. GitHub-hosted runners can't use your local `gcloud` login, so this is

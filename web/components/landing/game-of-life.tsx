@@ -2,9 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-// Conway's Game of Life behind the hero: simple local rules giving rise to coordinated, emergent
-// behavior — the literal metaphor for a hive mind. Tinted honey-amber and kept clearly visible
-// (like the Solar template's generative grid), masked to fade toward the edges.
+// Conway's Game of Life background for the hero, masked to fade at the edges.
 type Grid = { alive: boolean; opacity: number }[][];
 
 export function GameOfLife() {
@@ -64,7 +62,6 @@ export function GameOfLife() {
             cell.opacity = Math.max(cell.opacity - transitionSpeed, 0);
           }
           if (cell.opacity > 0) {
-            // soft neutral dots (stone-500), subtle and even across the whole hero
             ctx.fillStyle = `rgba(120, 113, 108, ${cell.opacity})`;
             ctx.beginPath();
             ctx.arc(j * cellSize + cellSize / 2, i * cellSize + cellSize / 2, 1.4, 0, Math.PI * 2);

@@ -8,7 +8,6 @@ const SIZES = {
   lg: { box: "h-10 w-10 rounded-md", icon: "h-5 w-5" },
 } as const;
 
-/** A bot-style rounded-square avatar: the agent's Lucide icon on a restrained tinted square. */
 export function AgentAvatar({
   agent,
   size = "md",

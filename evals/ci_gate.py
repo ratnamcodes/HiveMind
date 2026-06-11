@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CI gate (T18-B). Compares this PR's eval pass_rate to the main baseline and blocks on
+"""CI gate. Compares this PR's eval pass_rate to the main baseline and blocks on
 a regression worse than 2 points. Reads evals/last_run.json (written by runner.py) and
 evals/baseline.json; writes a PR-comment body to evals/pr_comment.md; exits 1 if blocked.
 

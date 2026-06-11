@@ -5,8 +5,7 @@ import { ExternalLink, ShieldCheck } from "lucide-react";
 import { useWarRoom } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-/** The run PAUSED and is waiting on a human. Rendered above the composer with the drafted
- *  fix + who's affected + $ at risk, and buttons that resume the paused run on the backend. */
+/** Approval card for a run paused on a human decision; buttons resume it on the backend. */
 export function ApprovalCard({ channelId }: { channelId: string }) {
   const decision = useWarRoom((s) => s.decisionByChannel[channelId]);
   const respond = useWarRoom((s) => s.respondToDecision);

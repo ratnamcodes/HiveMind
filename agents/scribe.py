@@ -1,4 +1,4 @@
-"""Scribe — HiveMind's record-keeper (MongoDB, thinking_level=minimal)."""
+"""Scribe condenses a finished incident into its archival record."""
 
 from __future__ import annotations
 

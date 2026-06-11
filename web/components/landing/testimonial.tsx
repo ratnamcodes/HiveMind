@@ -1,6 +1,5 @@
 import { HiveMark } from "./hive-logo";
 
-// A honeycomb-tinted pull quote — the Solar testimonial slot, reframed around the on-call reality.
 export function Testimonial() {
   return (
     <section className="px-4 xl:px-0">

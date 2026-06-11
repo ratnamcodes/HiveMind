@@ -36,7 +36,7 @@ const CREW: Member[] = [
   { icon: ShieldCheck, name: "Reviewer", partner: "Dynatrace SRG", Logo: DynatraceLogo, color: BRAND_COLOR.dynatrace, does: "Signs off on the fix, then confirms the service recovered." },
 ];
 
-// Solar's folded-corner "sticker" card — amber icon + tick, with the agent's real partner mark.
+// Folded-corner sticker card styles.
 const STICKER =
   "relative z-10 block h-full w-full overflow-hidden rounded-lg rounded-tr-[26px] bg-white px-6 pt-6 pb-5 shadow-[inset_0_0_0_1px] shadow-gray-200 transition-all duration-200 ease-in-out " +
   "before:absolute before:top-0 before:right-0 before:z-3 before:h-[30px] before:w-[30px] before:-translate-y-1/2 before:translate-x-1/2 before:rotate-45 before:bg-gray-50 before:shadow-[0_1px_0_0] before:shadow-gray-200 before:transition-all before:duration-200 before:content-[''] " +

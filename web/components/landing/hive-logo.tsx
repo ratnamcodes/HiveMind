@@ -1,9 +1,7 @@
 import { Hexagon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// The HiveMind mark: a filled hexagon in a rounded square badge. On the landing the badge is the
-// honey-orange of the CTAs. `tone="white"` is the inverse (white badge, orange hexagon) for use on
-// an orange background like the testimonial, where a solid orange badge would disappear.
+// HiveMind mark; tone="white" inverts for orange backgrounds.
 export function HiveMark({
   className,
   tone = "orange",

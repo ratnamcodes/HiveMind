@@ -4,7 +4,6 @@ import { useWarRoom } from "@/lib/store";
 import { AGENTS, isAgentId } from "@/lib/agents";
 import { cn } from "@/lib/utils";
 
-/** Three bouncing dots — a "…is typing" style liveness cue. */
 function Dots() {
   return (
     <span className="inline-flex items-end gap-0.5 pb-0.5">
@@ -20,19 +19,15 @@ function Dots() {
 }
 
 /**
- * Always-on liveness bar pinned above the composer. While the crew is working an incident it shows
- * — crystal clear and continuously animated — WHO is active and WHAT they're doing right now
- * (querying Dynatrace, opening the MR, shipping + verifying the fix). It fills every silent gap
- * (long tool calls, agent hand-offs, the post-approval recovery wait) so the channel never looks
- * frozen. Hides only once the incident is resolved or it's paused for a human decision.
+ * Liveness bar pinned above the composer while the crew works an incident: shows which agent
+ * is active and what it's doing. Hidden once resolved or while paused for a human decision.
  */
 export function LiveActivity({ channelId }: { channelId: string }) {
   const messages = useWarRoom((s) => s.messagesByChannel[channelId]);
   const decision = useWarRoom((s) => s.decisionByChannel[channelId]);
   const brief = useWarRoom((s) => s.briefByChannel[channelId]);
 
-  // Only ever live on a real, in-flight incident (a brief is emitted when one opens) — never on
-  // ordinary channels like #ops/#deploys.
+  // Only live on an in-flight incident (a brief is emitted when one opens).
   if (!brief) return null;
   if (!messages || messages.length === 0) return null;
   const resolved = messages.some(

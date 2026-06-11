@@ -1,6 +1,6 @@
 """FastAPI entry point for HiveMind.
 
-Wires the orchestrator LangGraph (Task 3) behind POST /chat and exposes
+Wires the orchestrator LangGraph behind POST /chat and exposes
 GET /healthz backed by a Redis ping. A lifespan handler verifies Redis is
 reachable at startup and crashes the app if it isn't.
 """
@@ -57,7 +57,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     redis = get_redis()
     if not await redis.ping():
         raise RuntimeError("Redis ping failed at startup")
-    # The REAL Dynatrace trigger: poll Davis problems and fire an incident on each new one.
+    # Poll Davis problems and fire an incident on each new one.
     poller = None
     if os.getenv("DT_PROBLEM_POLL") and dynatrace.available():
         poller = asyncio.create_task(_dynatrace_problem_poller())
@@ -72,7 +72,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded)
 app.add_middleware(SlowAPIMiddleware)
 # The war-room (localhost:3000) POSTs human-in-the-loop decisions to this backend
-# (localhost:8000) — a cross-origin request. Allow it (local demo; tighten in prod).
+# (localhost:8000), a cross-origin request. Allow it (local demo; tighten in prod).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,9 +85,7 @@ app.middleware("http")(populate_channel_id)
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("60/minute")
 async def chat(request: Request, req: ChatRequest) -> ChatResponse:
-    # Dispatch the message as an incident through the orchestrator (T14). NOTE: a
-    # /chat call is now a FULL incident run — it drives all six specialists against
-    # live partners and can open a real MR; it is not a quick reply.
+    # Runs a full incident through the orchestrator; can open a real MR.
     result = await orchestrator_runner.run(
         {"alert": req.message, "channel_id": req.channel_id}
     )
@@ -112,7 +110,7 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok", "redis": "ok"}
 
 
-# --- T17: live event stream (/ws) + Dynatrace webhook ----------------------
+# live event stream (/ws) + Dynatrace webhook
 _WS_BACKLOG_MAX = 100
 # Reuse HMAC_SECRET if a dedicated webhook secret isn't set, so this works out of the box.
 _DT_WEBHOOK_SECRET = os.getenv("DT_WEBHOOK_SECRET") or os.getenv("HMAC_SECRET", "")
@@ -136,7 +134,7 @@ def _drop_one_token(backlog: deque[str]) -> bool:
 async def ws(websocket: WebSocket) -> None:
     """One WS per browser tab. Subscribes to the user's Redis event channel and forwards
     typed events (token/status/channel_created/complete). Backpressure: if the send
-    backlog exceeds 100, drop the oldest TOKEN events but always keep status/lifecycle."""
+    backlog exceeds 100, drop the oldest token events but always keep status/lifecycle."""
     user_id = websocket.query_params.get("user") or events.DEFAULT_USER
     await websocket.accept()
     pubsub = get_redis().pubsub()
@@ -184,7 +182,7 @@ def _verify_dt_signature(raw: bytes, signature: str | None) -> bool:
     return hmac.compare_digest(signature, expected)
 
 
-# --- the REAL Dynatrace trigger: a live Davis problem drives the crew --------
+# Dynatrace trigger: a live Davis problem drives the crew
 _seen_dt_problems: set[str] = set()
 
 
@@ -220,9 +218,8 @@ async def _fire_incident_from_dt_problem(p: dict) -> None:
 
 
 async def _dynatrace_problem_poller() -> None:
-    """Poll Dynatrace for OPEN Davis problems on checkout-service and fire a HiveMind incident on
-    each newly-seen, recent one. This is the real Dynatrace trigger — a Davis problem (raised by the
-    log-event rule on live breach logs) drives the crew, replacing the app self-trigger."""
+    """Poll Dynatrace for open Davis problems on checkout-service and fire an incident on
+    each newly seen, recent one."""
     import time as _t
 
     await asyncio.sleep(8)
@@ -260,9 +257,9 @@ async def _run_incident_bg(payload: dict) -> None:
 
 @app.post("/api/incoming/dynatrace")
 async def dynatrace_webhook(request: Request) -> dict:
-    """Real Dynatrace alert webhook — the closing-the-loop entry point. Validates the
-    HMAC signature, materializes a war-room incident channel, posts the alert, then spawns
-    a full orchestrator run whose live events stream to the browser over /ws."""
+    """Dynatrace alert webhook. Validates the HMAC signature, materializes a war-room
+    incident channel, posts the alert, then spawns a full orchestrator run whose live
+    events stream to the browser over /ws."""
     raw = await request.body()
     if not _verify_dt_signature(raw, request.headers.get("X-DT-Signature")):
         raise HTTPException(status_code=401, detail="invalid webhook signature")
@@ -288,7 +285,6 @@ async def dynatrace_webhook(request: Request) -> dict:
         "topic": problem.title,
         "resolved": False,
     }
-    # 1) Materialize the channel in the sidebar (pulse), then post the alert banner.
     await events.publish(user_id, events.channel_created(channel))
     await events.publish(
         user_id,
@@ -299,7 +295,6 @@ async def dynatrace_webhook(request: Request) -> dict:
         ),
     )
 
-    # 2) Spawn the full incident run; its status/token/complete events stream to /ws.
     asyncio.create_task(
         _run_incident_bg(
             {
@@ -312,14 +307,14 @@ async def dynatrace_webhook(request: Request) -> dict:
                 # Optional scenario hint that activates a CustomerLiaison Fivetran depth play
                 # (e.g. GDPR PII redaction before the public MR).
                 "liaison_context": str(body.get("liaison_context") or ""),
-                # When true, the run PAUSES at the approval gate and waits for a human to
-                # approve via POST /api/incident/<id>/resume (the human-in-the-loop demo).
+                # When true, the run pauses at the approval gate and waits for a human to
+                # approve via POST /api/incident/<id>/resume.
                 "hitl": bool(body.get("hitl")),
-                # Demo grounding: the repo path the diagnosis points at, so CodeArch fixes the
-                # right subsystem deterministically when the alert's surface service is generic.
+                # The repo path the diagnosis points at, so CodeArch fixes the right
+                # subsystem when the alert's surface service is generic.
                 "code_target": str(body.get("code_target") or ""),
-                # The customer-FACING service Liaison should compute blast radius against (the
-                # implicated CAUSE service, e.g. fraud-decision, may have no warehouse rows).
+                # The customer-facing service Liaison should compute blast radius against
+                # (the implicated cause service may have no warehouse rows).
                 "customer_service": str(body.get("customer_service") or ""),
             }
         )
@@ -327,7 +322,7 @@ async def dynatrace_webhook(request: Request) -> dict:
     return {"status": "accepted", "channel_id": channel_id, "problem_id": problem.problem_id}
 
 
-# --- human-in-the-loop: resume a run paused at an approval gate -------------
+# human-in-the-loop: resume a run paused at an approval gate
 class ResumeRequest(BaseModel):
     choice: str = "approve"  # approve | changes | escalate
     feedback: str = ""
@@ -350,11 +345,7 @@ async def resume_incident(incident_id: str, req: ResumeRequest) -> dict:
     return {"status": "resuming", "incident_id": incident_id, "choice": req.choice}
 
 
-# --- the REAL trigger: a real service self-reports sustained degradation -----
-# The instrumented checkout-service calls this when its OWN real latency breaches the SLO
-# (real behavior, not a seed). HiveMind then investigates the real telemetry, drafts the fix,
-# and pauses for a human. This is the unblocked "real, not scripted" trigger; the Dynatrace
-# Davis-problem Workflow webhook (above) is the deeper integration once the trace token is added.
+# The instrumented checkout-service calls this when its own latency breaches the SLO.
 @app.post("/api/incoming/app-incident")
 async def app_incident(request: Request) -> dict:
     body = json.loads(await request.body() or b"{}")
@@ -386,7 +377,7 @@ async def app_incident(request: Request) -> dict:
             "alert": f"{symptom} on {service} (severity {severity}). {evidence}",
             "affected_services": [service],
             "severity": severity,
-            "hitl": True,  # the real loop always pauses for a human before shipping
+            "hitl": True,  # always pause for a human before shipping
             "real_app": True,  # on approval, apply the fix to the live app + verify recovery
             "customer_service": "checkout",
             "code_target": "payment-service/config.yaml",
@@ -395,7 +386,7 @@ async def app_incident(request: Request) -> dict:
     return {"status": "accepted", "channel_id": channel_id, "problem_id": pid}
 
 
-# --- talk to the crew: the war-room composer posts here ---------------------
+# the war-room composer posts here
 _CHAT_PERSONAS = {
     "detective": "Detective, the root-cause specialist. You query real Dynatrace Grail data to find why a service broke.",
     "log_diver": "LogDiver, the logs specialist. You pin a slowdown to the exact deploy from Elastic logs.",
@@ -407,8 +398,8 @@ _CHAT_PERSONAS = {
 
 
 async def _agent_chat_reply(user_id: str, channel_id: str, agent_id: str, text: str) -> None:
-    """A teammate messaged the crew in the war room. Reply briefly and in character, streamed back
-    over /ws so the channel feels alive. Best-effort: a model hiccup falls back to a plain reply."""
+    """Reply briefly and in character to a teammate's war-room message, streamed back
+    over /ws. Best-effort: a model hiccup falls back to a plain reply."""
     agent_id = agent_id if agent_id in _CHAT_PERSONAS else "detective"
     mid = f"{agent_id}-chat-{os.urandom(3).hex()}"
     await events.publish(user_id, events.status(channel_id, agent_id, "thinking"))
@@ -459,10 +450,9 @@ async def chat_in_channel(request: Request, msg: ChatMsg) -> dict:
     return {"status": "ok"}
 
 
-# --- Auth user store -------------------------------------------------------
 # The Next.js frontend (web/lib/session.ts) hashes the password with scrypt and uses these two
 # endpoints as its user store. Backed by Atlas, so accounts survive the frontend's serverless
-# cold starts (a file store on Vercel can't — its filesystem is ephemeral and read-only).
+# cold starts (a file store on Vercel can't; its filesystem is ephemeral and read-only).
 class UserRecord(BaseModel):
     email: str
     name: str = ""

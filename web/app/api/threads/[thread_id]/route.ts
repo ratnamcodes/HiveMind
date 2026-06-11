@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getThread } from "@/lib/mock/data";
 
-// GET /api/threads/:thread_id — a thread's root + replies.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ thread_id: string }> },

@@ -1,12 +1,11 @@
 """Two-tier memory for HiveMind agents.
 
-HotMemory (Redis) holds the last 20 turns per channel — millisecond reads,
-24h TTL, intended as the live working memory for an ongoing incident.
+HotMemory (Redis) holds the last 20 turns per channel (24h TTL).
 
-ColdMemory (MongoDB Atlas) holds every finished incident as a semantic
-record. Voyage AI auto-embeds the `summary` field on insert via the
+ColdMemory (MongoDB Atlas) holds finished incidents as semantic records.
+Voyage AI auto-embeds the `summary` field on insert via the
 collection-level autoEmbed index, so this module never embeds anything
-itself — both inserts and `$vectorSearch` queries pass plain text.
+itself; both inserts and `$vectorSearch` queries pass plain text.
 """
 
 from __future__ import annotations
@@ -19,7 +18,6 @@ from pydantic import BaseModel, Field
 from hivemind.mongo_client import get_db
 from hivemind.redis_client import get_redis
 
-# --- Config -----------------------------------------------------------------
 CHANNEL_KEY_TEMPLATE = "channel:{channel_id}:turns"
 HOT_WINDOW = 20
 HOT_TTL_SECONDS = 60 * 60 * 24  # 24h
@@ -38,7 +36,6 @@ return 1
 """
 
 
-# --- Models -----------------------------------------------------------------
 Role = Literal["user", "agent", "system"]
 Severity = Literal["sev1", "sev2", "sev3"]
 
@@ -72,12 +69,12 @@ class IncidentRecall(Incident):
     score: float
 
 
-# --- HotMemory --------------------------------------------------------------
 class HotMemory:
     """Sliding window of recent turns per channel, backed by Redis.
 
     All ops are atomic: append uses a Lua script that combines RPUSH + LTRIM
-    + EXPIRE so concurrent appends can't interleave with the trim.
+    + EXPIRE so concurrent appends can't interleave with the trim. Only the
+    memory-tools surface and scripts use this today.
     """
 
     def __init__(self) -> None:
@@ -116,7 +113,6 @@ class HotMemory:
         await self._redis.delete(self._key(channel_id))
 
 
-# --- ColdMemory -------------------------------------------------------------
 _PROJECTED_FIELDS: dict[str, Any] = {
     "_id": 1,
     "title": 1,
@@ -134,9 +130,9 @@ _PROJECTED_FIELDS: dict[str, Any] = {
 class ColdMemory:
     """Long-term semantic memory of finished incidents in MongoDB Atlas.
 
-    Backed by the collection-level Voyage autoEmbed index on `summary`,
-    which means inserts and queries both pass plain text — no embedding
-    code or API keys live in this process.
+    Backed by the collection-level Voyage autoEmbed index on `summary`;
+    inserts and queries both pass plain text, so no embedding code or
+    API keys live in this process.
     """
 
     def __init__(self) -> None:
@@ -157,7 +153,7 @@ class ColdMemory:
         """Top-k incidents most similar to `query`, with optional post-filter.
 
         `filters` is a MongoDB query expression applied as a `$match` stage
-        AFTER `$vectorSearch`. When filters are present we over-fetch from
+        after `$vectorSearch`. When filters are present we over-fetch from
         vector search so post-filtering rarely returns fewer than k results.
         """
         vector_limit = k * 4 if filters else k
@@ -188,7 +184,8 @@ class ColdMemory:
 
         Re-uses the source incident's `summary` text as the recall query and
         drops the source itself from results. We over-fetch by one so a
-        self-match doesn't shrink the returned set below k.
+        self-match doesn't shrink the returned set below k. Only the
+        memory-tools surface and scripts use this today.
         """
         source = await self._collection.find_one(
             {"_id": incident_id}, {"summary": 1}

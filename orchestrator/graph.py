@@ -1,4 +1,4 @@
-"""HiveMind incident orchestrator (T14) — the conductor of the symphony.
+"""HiveMind incident orchestrator.
 
 Composes the 6 specialists into a stateful LangGraph incident-response graph:
 
@@ -9,16 +9,16 @@ Composes the 6 specialists into a stateful LangGraph incident-response graph:
                          revise   → back to verdict.revise_target  (≤ MAX_REVISIONS, then escalate)
                          escalate → END (flagged + human summary)
 
-Each node runs one specialist via _run_agent() (the T13 review() pattern) inside its own
-OTEL span, and OrchestratorRunner wraps the whole run in ONE Phoenix "incident" span — so
-the trace tree is: incident → each agent → its Gemini + tool spans (T13's instrumentation).
+Each node runs one specialist via _run_agent() inside its own OTEL span, and
+OrchestratorRunner wraps the whole run in one Phoenix "incident" span, so the trace tree
+is: incident → each agent → its Gemini + tool spans.
 
-State holds each agent's output as a model_dump() DICT (not the Pydantic instance) so the
-Redis checkpointer can JSON-serialize it — that's what lets a killed run resume from its
-last checkpoint. The `: dict` fields below carry the shapes named in the comments.
+State holds each agent's output as a model_dump() dict (not the Pydantic instance) so the
+Redis checkpointer can JSON-serialize it, which lets a killed run resume from its last
+checkpoint. The `: dict` fields below carry the shapes named in the comments.
 
 Fan-in is implicit: LogDiver/CodeArch/Liaison all edge to Scribe, and LangGraph runs Scribe
-once its *triggered* predecessors complete — so the parallel path waits for all 3, while a
+once its *triggered* predecessors complete, so the parallel path waits for all 3, while a
 single revised agent waits for just itself.
 """
 
@@ -62,8 +62,8 @@ load_dotenv()
 
 MAX_REVISIONS = 2
 # Per-agent hard cap (seconds): a hung or rate-limit-stalled LLM/tool call must never
-# freeze a whole incident (that's what froze the eval suite on scenario #6). The per-hop
-# critic retries once on a timed-out (empty) result, so a transient stall self-heals.
+# freeze a whole incident. The per-hop critic retries once on a timed-out (empty) result,
+# so a transient stall self-heals.
 AGENT_TIMEOUT = 240.0
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 _tracer = otel_trace.get_tracer("hivemind.orchestrator")
@@ -106,8 +106,7 @@ DETECTIVE, LOG_DIVER, CODE_ARCH, LIAISON = (
 SCRIBE, REVIEWER = "scribe", "reviewer"
 FANOUT = [LOG_DIVER, CODE_ARCH, LIAISON]
 
-# A one-line "why I'm doing this" each agent narrates BEFORE its tool calls — turns the
-# fire-and-forget spinner into visible, plain-English reasoning a third person can follow.
+# A one-line "why I'm doing this" narrated before each agent's tool calls.
 INTENTS = {
     DETECTIVE: "Pulling Dynatrace logs around the deploy window to find what changed and why.",
     LOG_DIVER: "Cross-checking Elastic logs and the deploy registry to blame the exact release.",
@@ -121,7 +120,7 @@ INTENTS = {
 class OrchestratorState(TypedDict, total=False):
     incident_id: str
     channel_id: str
-    user_id: str  # whose /ws stream receives this run's live events (T17)
+    user_id: str  # whose /ws stream receives this run's live events
     alert_payload: dict
     finding: dict | None  # InvestigationFinding.model_dump()
     log_report: dict | None  # LogTriageReport.model_dump()
@@ -136,15 +135,13 @@ class OrchestratorState(TypedDict, total=False):
     arize_trace_url: str
 
 
-# --- helpers ---------------------------------------------------------------
+# helpers
 async def _run_agent(agent, payload_json: str, on_event=None) -> tuple[str, int]:
     """Run one ADK agent on a JSON payload; return (final text, number of tool calls made).
 
-    Fresh session per call — HiveMind investigates each incident in isolation (no cross-
-    incident memory). ADK *explicit* context caching only reuses within a persistent
-    session (proven in scripts/measure_caching.py), so it does NOT apply on this path and
-    would only create throwaway caches; this path rides free *implicit* caching instead.
-    See hivemind/caching.py for the explicit layer + when it pays off.
+    Fresh session per call: each incident is investigated in isolation. ADK explicit
+    context caching only reuses within a persistent session, so this path relies on
+    implicit caching; see hivemind/caching.py for the explicit layer.
     """
     session_service = InMemorySessionService()
     runner = Runner(agent=agent, app_name="hivemind", session_service=session_service)
@@ -168,26 +165,19 @@ async def _run_agent(agent, payload_json: str, on_event=None) -> tuple[str, int]
             if event.is_final_response() and event.content and event.content.parts:
                 final_text = "".join(p.text or "" for p in event.content.parts)
 
-    # Run the agent in its own task and bound it with shield(): a hung/throttled MCP
-    # or LLM call that IGNORES cancellation (e.g. the Dynatrace notebook tool stalling on
-    # a Vertex per-minute rate limit) would otherwise make plain wait_for() block on the
-    # stuck task's cancellation — freezing the whole incident for many minutes (observed
-    # in a live run). shield() lets wait_for STOP WAITING at the deadline without blocking
-    # on cancellation; we then request cancel best-effort and proceed with whatever we
-    # already streamed. The orphaned task errors out on its own and never gates the graph.
+    # shield() lets wait_for() stop at the deadline even if the task ignores cancellation;
+    # we then cancel best-effort and proceed with whatever was streamed.
     consume_task = asyncio.create_task(_consume())
     try:
         await asyncio.wait_for(asyncio.shield(consume_task), timeout=AGENT_TIMEOUT)
     except asyncio.TimeoutError:
-        consume_task.cancel()  # best-effort; do NOT await it — that's the whole point
+        consume_task.cancel()  # best-effort; not awaited
     except asyncio.CancelledError:
         consume_task.cancel()
         raise
     except Exception as e:  # noqa: BLE001
-        # A hung/erroring MCP or LLM tool (e.g. an MCP ClientRequest 60s timeout, a Vertex
-        # rate-limit) must NOT crash the node — it returns whatever it streamed and the per-hop
-        # critic retries or the run proceeds. Observed: a Dynatrace MCP timeout cancelled the
-        # detective node and aborted the whole real-incident run.
+        # A hung tool must not crash the node: keep whatever was streamed and let the
+        # per-hop critic retry.
         consume_task.cancel()
         with _tracer.start_as_current_span("agent.tool_error") as s:
             s.set_attribute("error", f"{type(e).__name__}: {e}"[:300])
@@ -198,8 +188,7 @@ async def _run_with_critic(
     agent, payload_json: str, schema, node_name: str, *, expect_tools: bool = True, on_event=None
 ) -> dict:
     """Run an agent, then apply the per-hop critic (schema-valid + non-empty + grounded).
-    On failure, retry ONCE before proceeding — catching ungrounded/garbage output at the
-    hop instead of letting it ride to the final Reviewer. Returns the validated dict."""
+    On failure, retry once before proceeding. Returns the validated dict."""
     text, tool_calls = "", 0
     for attempt in range(2):
         text, tool_calls = await _run_agent(agent, payload_json, on_event=on_event)
@@ -211,8 +200,7 @@ async def _run_with_critic(
             s.set_attribute("tool_calls", tool_calls)
             s.set_attribute("reasons", "; ".join(crit.reasons))
     # Retries exhausted: proceed with the best-effort output (the final Reviewer is the
-    # backstop); this raises only if it's truly unparseable, which ADK's output_schema
-    # makes rare.
+    # backstop). Raises only if the output is unparseable.
     return schema.model_validate_json(text).model_dump(mode="json")
 
 
@@ -224,11 +212,9 @@ def _services(state: OrchestratorState) -> list[str]:
 
 
 def _customer_services(state: OrchestratorState) -> list[str]:
-    """Services to assess CUSTOMER/revenue impact against. This is the customer-FACING
-    service from the original alert (checkout / payment-service), NOT Detective's implicated
-    CAUSE service — which may be an internal service (e.g. fraud-decision, pos-gateway,
-    inventory-service) that has no direct rows in the customer warehouse. Liaison stays
-    grounded on the surface customers actually touch."""
+    """Services to assess customer/revenue impact against: the customer-facing service
+    from the original alert, not Detective's implicated cause service, which may be an
+    internal service with no rows in the customer warehouse."""
     cs = state["alert_payload"].get("customer_service")
     if cs:
         return [cs]
@@ -251,9 +237,9 @@ def _incident_narrative(state: OrchestratorState) -> str:
     return " ".join(parts)
 
 
-# --- live event emission (T17) ---------------------------------------------
+# live event emission
 async def _emit(state: OrchestratorState, event: dict) -> None:
-    """Publish a war-room event, best-effort — an event-bus hiccup never fails the run."""
+    """Publish a war-room event, best-effort; an event-bus hiccup never fails the run."""
     try:
         await events.publish(state.get("user_id") or events.DEFAULT_USER, event)
     except Exception:  # noqa: BLE001
@@ -273,7 +259,7 @@ def _emit_cb(state: OrchestratorState, agent_id: str):
 
 async def _stream_summary(state: OrchestratorState, agent_id: str, text: str) -> None:
     """Stream an agent's human-readable summary into the channel as token events,
-    chunked for a 'typing' feel. The per-agent pacing is what makes the run feel live."""
+    chunked for a 'typing' feel."""
     text = (text or "").strip()
     if not text:
         return
@@ -286,11 +272,10 @@ async def _stream_summary(state: OrchestratorState, agent_id: str, text: str) ->
 
 
 async def _apply_fix_and_verify_recovery(state: OrchestratorState) -> str | None:
-    """After a human approves, APPLY the approved fix to the running app (mirrors merging the MR
-    + redeploying), VERIFY the real service recovered by polling its real latency, AND prove it
-    in real Dynatrace data — the post-fix latency drop shows up in Grail. Only for the real
-    app-triggered incident (alert_payload.real_app); seeded scenarios skip it. SRG-based recovery
-    proof is the upgrade once a trace/settings token is available."""
+    """After a human approves, apply the fix to the running app (mirrors merging the MR
+    and redeploying), verify the service recovered by polling its latency, and confirm
+    the post-fix drop in Dynatrace Grail. Only for app-triggered incidents
+    (alert_payload.real_app); seeded scenarios skip it."""
     if not state["alert_payload"].get("real_app"):
         return None
     import os as _os
@@ -309,13 +294,12 @@ async def _apply_fix_and_verify_recovery(state: OrchestratorState) -> str | None
                 lines = open(cfg).read().splitlines()
                 lines = ["downstream_delay_ms: 0" if l.strip().startswith("downstream_delay_ms") else l for l in lines]
                 open(cfg, "w").write("\n".join(lines) + "\n")
-            fix_t0 = _t.time()  # the moment the fix shipped — SRG validates only the window AFTER this
-            # The instrumented app to re-poll for recovery. Local dev runs it on :3100; in the
-            # cloud there's no local app, so RECOVERY_APP_URL stays unset and we skip straight to
-            # the Dynatrace proof below instead of bailing out.
+            fix_t0 = _t.time()  # SRG validates only the window after the fix shipped
+            # App to re-poll for recovery. Local dev runs it on :3100; in the cloud
+            # RECOVERY_APP_URL is unset and we skip to the Dynatrace check below.
             app_url = (_os.getenv("RECOVERY_APP_URL") or "http://localhost:3100").rstrip("/")
             lat: list[int] = []
-            for _ in range(8):  # verify recovery from real latency (+ generate fresh post-fix logs)
+            for _ in range(8):  # verify recovery from latency (and generate fresh post-fix logs)
                 try:
                     lat.append(int(_rq.get(f"{app_url}/checkout", timeout=5).json().get("latency_ms", 999)))
                 except Exception:  # noqa: BLE001
@@ -325,9 +309,9 @@ async def _apply_fix_and_verify_recovery(state: OrchestratorState) -> str | None
                 msg = (f"Recovery verified on live telemetry: checkout latency back to "
                        f"~{int(statistics.median(lat))}ms (peak {max(lat)}ms). SLO restored, service healthy.")
             else:
-                # No local app to poll (cloud deploy) — confirm recovery from Dynatrace data alone.
+                # No local app to poll (cloud deploy); confirm recovery from Dynatrace data alone.
                 msg = "Fix applied and redeployed. Confirming recovery against live Dynatrace data."
-            # Prove it in REAL Dynatrace data: poll Grail until the post-fix latency lands (ingest lag).
+            # Poll Grail until the post-fix latency lands (ingest lag).
             try:
                 for _ in range(6):  # up to ~60s for OTLP logs to reach Grail
                     rec = dt.recent_latency("checkout", 3)
@@ -338,10 +322,9 @@ async def _apply_fix_and_verify_recovery(state: OrchestratorState) -> str | None
                     _t.sleep(10)
             except Exception:  # noqa: BLE001
                 pass
-            # Site Reliability Guardian: evaluate the guardian's objective against live Grail — but
-            # ONLY over the window since the fix shipped (else the breach period drags the average up
-            # and the guardian fails a service that has actually recovered). Wait until there's a clean
-            # post-fix minute, then validate the most-recent minute.
+            # Site Reliability Guardian: evaluate only the window since the fix shipped
+            # (else the breach period drags the average up). Wait for a clean post-fix
+            # minute, then validate the most recent minute.
             try:
                 while _t.time() - fix_t0 < 95:  # let the breach age out of a 1-min window
                     _t.sleep(5)
@@ -359,11 +342,10 @@ async def _apply_fix_and_verify_recovery(state: OrchestratorState) -> str | None
 
 
 async def _dynatrace_copilot_beat(state: OrchestratorState) -> None:
-    """Deep-Dynatrace beat surfaced live in the war room, BEFORE the Vertex-bound agent runs:
-    Davis CoPilot (Dynatrace's own AI) translates the alert into DQL, and we run a real Grail
-    query for the implicated service's error evidence + current latency. Deterministic and fast
-    (~4s), independent of the agent/Vertex-quota path — so the channel always shows real Dynatrace
-    AI + real telemetry even if a specialist is throttled. Best-effort: never fails the run."""
+    """Before the Vertex-bound agent runs: Davis CoPilot translates the alert into DQL, and
+    we run a Grail query for the implicated service's error evidence and current latency.
+    Deterministic and independent of the agent path, so the channel shows Dynatrace data
+    even if a specialist is throttled. Best-effort: never fails the run."""
     if not dt.available():
         return
     p = state["alert_payload"]
@@ -379,8 +361,7 @@ async def _dynatrace_copilot_beat(state: OrchestratorState) -> None:
         dql_q, errs, peak, problems = await asyncio.to_thread(_work)
     except Exception:  # noqa: BLE001
         return
-    # If Davis AI itself has already opened a problem on this service, lead with it — the strongest
-    # signal that this is a real, Dynatrace-detected incident (not a seeded alert).
+    # If Davis has already opened a problem on this service, lead with it.
     if problems:
         pr = problems[0]
         await _emit(state, events.token(cid, DETECTIVE, f"dt-{uuid.uuid4().hex[:8]}",
@@ -400,7 +381,7 @@ async def _dynatrace_copilot_beat(state: OrchestratorState) -> None:
                                         "Grail confirms it (last hour): " + ", ".join(bits) + "."))
 
 
-# --- nodes -----------------------------------------------------------------
+# nodes
 async def detective_node(state: OrchestratorState) -> dict:
     p = state["alert_payload"]
     req = InvestigationRequest(
@@ -412,7 +393,7 @@ async def detective_node(state: OrchestratorState) -> dict:
     cb = _emit_cb(state, DETECTIVE)
     await cb("thinking")
     await _emit(state, events.reasoning(state["channel_id"], DETECTIVE, INTENTS[DETECTIVE]))
-    # Real Dynatrace AI + Grail evidence first (deterministic, fast), then the specialist reasons on top.
+    # Dynatrace AI + Grail evidence first (deterministic, fast), then the specialist reasons on top.
     await _dynatrace_copilot_beat(state)
     with _tracer.start_as_current_span(DETECTIVE):
         finding = await _run_with_critic(
@@ -445,9 +426,8 @@ async def log_diver_node(state: OrchestratorState) -> dict:
 async def code_arch_node(state: OrchestratorState) -> dict:
     f = state.get("finding")
     _q = (f.get("recommended_next_step") or f.get("root_cause_hypothesis")) if f else ""
-    # Demo grounding: if the diagnosis points at a specific repo file, steer CodeArch to it so
-    # it fixes the right subsystem (the repo now has 6 service files; the alert's surface
-    # service can otherwise pull it to the wrong one). CodeArch still reads + patches for real.
+    # If the diagnosis points at a specific repo file, steer CodeArch to it so it fixes
+    # the right subsystem (the alert's surface service can pull it to the wrong file).
     _target = state["alert_payload"].get("code_target")
     if _target:
         _q = f"{_q} The fix belongs in the file `{_target}`. Read that exact path and patch it."
@@ -461,8 +441,8 @@ async def code_arch_node(state: OrchestratorState) -> dict:
         arize_trace_url=state.get("arize_trace_url"),
         dynatrace_notebook_url=(f.get("notebook_url") if f else None),
         workflow_public_url=(f.get("workflow_public_url") if f else None),
-        # Ground CodeArch in the repo's real layout so it reads an actual file
-        # instead of guessing paths (the bug that left mr_url null).
+        # Ground CodeArch in the repo layout so it reads an actual file instead of
+        # guessing paths.
         repo_tree=fetch_repo_tree(),
     )
     cb = _emit_cb(state, CODE_ARCH)
@@ -500,7 +480,7 @@ async def customer_liaison_node(state: OrchestratorState) -> dict:
             customer_liaison, req.model_dump_json(), CustomerImpactReport, LIAISON, on_event=cb
         )
     await cb("done")
-    # Feed the right-rail IMPACT panel (the differentiator no incumbent shows): who's hit + $ at risk.
+    # Feed the right-rail impact panel: who's hit and dollars at risk.
     await _emit(state, events.impact(state["channel_id"], {
         "customers_affected": customer_report.get("customers_affected"),
         "revenue_at_risk_usd": customer_report.get("revenue_at_risk_usd"),
@@ -536,7 +516,7 @@ async def scribe_node(state: OrchestratorState) -> dict:
         text, _ = await _run_agent(scribe, summary_in.model_dump_json(), on_event=cb)
     stored = StoredIncident.model_validate_json(text)
 
-    # Scribe has no write tool — the node persists the synthesis to Atlas ColdMemory.
+    # Scribe has no write tool; the node persists the synthesis to Atlas ColdMemory.
     incident = Incident(
         id=(stored.incident_id or state["incident_id"]),
         title=stored.title,
@@ -550,7 +530,7 @@ async def scribe_node(state: OrchestratorState) -> dict:
     try:
         await ColdMemory().store_incident(incident)
         stored = stored.model_copy(update={"stored": True, "incident_id": incident.id})
-    except Exception as e:  # noqa: BLE001 — don't fail the incident on an Atlas hiccup
+    except Exception as e:  # noqa: BLE001 (don't fail the incident on an Atlas hiccup)
         stored = stored.model_copy(update={"stored": False})
         with _tracer.start_as_current_span("scribe.persist_error") as s:
             s.set_attribute("error", f"{type(e).__name__}: {e}")
@@ -560,7 +540,7 @@ async def scribe_node(state: OrchestratorState) -> dict:
 
 
 async def reviewer_node(state: OrchestratorState) -> dict:
-    # The orchestrator Reviewer gates the WHOLE incident, so it sees every output dict.
+    # The orchestrator Reviewer gates the whole incident, so it sees every output dict.
     incident_view = {
         k: state.get(k)
         for k in ("finding", "log_report", "code_finding", "customer_report", "stored_incident")
@@ -584,13 +564,12 @@ async def reviewer_node(state: OrchestratorState) -> dict:
     return out
 
 
-# --- human-in-the-loop approval gate ---------------------------------------
 async def approval_gate_node(state: OrchestratorState) -> dict:
-    """The crew has done the work and its own Reviewer approved — now PAUSE and ask a human
-    before anything ships. Emits a decision_request card (the drafted fix + who's affected + $
-    at risk), then interrupt()s: LangGraph snapshots state to Redis and the graph STOPS until
-    POST /api/incident/<id>/resume calls Command(resume=<choice>). Nothing irreversible has
-    happened — CodeArch opened a DRAFT MR; the human decides whether it ships."""
+    """Pause and ask a human before anything ships. Emits a decision_request card (the
+    drafted fix, who's affected, dollars at risk), then interrupt()s: LangGraph snapshots
+    state to Redis and the graph stops until POST /api/incident/<id>/resume calls
+    Command(resume=<choice>). CodeArch only opened a draft MR; the human decides whether
+    it ships."""
     cf = state.get("code_finding") or {}
     cr = state.get("customer_report") or {}
     cid = state["channel_id"]
@@ -628,8 +607,8 @@ async def approval_gate_node(state: OrchestratorState) -> dict:
     await cb("awaiting_human")
     await _emit(state, events.decision_request(cid, payload))
 
-    # PAUSE. Resumes with the value passed to Command(resume=...). On a fresh (non-resumed)
-    # run this raises GraphInterrupt out of ainvoke; run_full detects it and leaves the card up.
+    # Resumes with the value passed to Command(resume=...). On a fresh run this raises
+    # GraphInterrupt out of ainvoke; run_full detects it and leaves the card up.
     decision = interrupt(payload)
 
     choice = (decision or {}).get("choice", "approve") if isinstance(decision, dict) else str(decision or "approve")
@@ -640,7 +619,7 @@ async def approval_gate_node(state: OrchestratorState) -> dict:
     await _emit(state, events.decision_made(cid, decision_id, choice, detail))
     await cb("done")
     await _stream_summary(state, REVIEWER, detail)
-    # On approval, HiveMind applies the fix to the live app and verifies it recovered (real signal).
+    # On approval, apply the fix to the live app and verify it recovered.
     if choice == "approve":
         await _emit(state, events.reasoning(cid, REVIEWER, "Shipping the approved fix and verifying the service recovers…"))
         recovery = await _apply_fix_and_verify_recovery(state)
@@ -649,12 +628,12 @@ async def approval_gate_node(state: OrchestratorState) -> dict:
     return {"human_decision": choice}
 
 
-# --- routing ---------------------------------------------------------------
+# routing
 def route_after_detective(state: OrchestratorState) -> list[str] | str:
-    """Fan out to the 3 specialists if there's an actionable service — either Detective
-    implicated one, OR the alert named an affected service (the real app-triggered path always
-    does). This keeps a real incident moving to the fix + human gate even when Detective's
-    Dynatrace call was thin or timed out; only a truly contextless alert escalates outright."""
+    """Fan out to the 3 specialists if there's an actionable service: either Detective
+    implicated one or the alert named an affected service. Keeps an incident moving even
+    when Detective's Dynatrace call was thin or timed out; only a contextless alert
+    escalates outright."""
     f = state.get("finding")
     has_service = (f and f.get("implicated_service")) or state["alert_payload"].get("affected_services")
     return list(FANOUT) if has_service else REVIEWER
@@ -663,10 +642,10 @@ def route_after_detective(state: OrchestratorState) -> list[str] | str:
 def route_after_reviewer(state: OrchestratorState) -> str:
     v = state.get("verdict")
     if state["alert_payload"].get("hitl"):
-        # Human-in-the-loop: a person makes the FINAL call at the gate whenever the crew drafted
-        # a fix to act on. The Reviewer's verdict (approve/revise/escalate) is advisory and shown
-        # on the approval card — we don't auto-revise (the human decides, which is faster and the
-        # whole point). If the crew produced no actionable fix, fall through to finalize/escalate.
+        # Human-in-the-loop: the human makes the final call whenever the crew drafted a
+        # fix. The Reviewer's verdict (approve/revise/escalate) is advisory, shown on the
+        # approval card; no auto-revise. With no actionable fix, fall through to
+        # finalize/escalate.
         cf = state.get("code_finding")
         if cf and cf.get("merge_request_url"):
             return "approval_gate"
@@ -707,7 +686,6 @@ def finalize_node(state: OrchestratorState) -> dict:
     return {"output": output}
 
 
-# --- graph -----------------------------------------------------------------
 def build_graph(checkpointer=None):
     g = StateGraph(OrchestratorState)
     g.add_node(DETECTIVE, detective_node)
@@ -724,8 +702,8 @@ def build_graph(checkpointer=None):
     for n in FANOUT:
         g.add_edge(n, SCRIBE)  # fan-in: Scribe waits for whichever specialists ran
     g.add_edge(SCRIBE, REVIEWER)
-    # Reviewer can revise back to ANY specialist (incl. detective) or finalize. detective
-    # must be in this list or a `revise -> detective` verdict KeyErrors in routing.
+    # Reviewer can revise back to any specialist or finalize. detective must be in this
+    # list or a `revise -> detective` verdict KeyErrors in routing.
     g.add_conditional_edges(REVIEWER, route_after_reviewer, [DETECTIVE, *FANOUT, "approval_gate", "finalize"])
     g.add_edge("approval_gate", "finalize")  # after the human decides, build the output + END
     g.add_edge("finalize", END)
@@ -733,7 +711,6 @@ def build_graph(checkpointer=None):
     return g.compile(checkpointer=checkpointer or MemorySaver())
 
 
-# --- public entry point ----------------------------------------------------
 class OrchestratorOutput(BaseModel):
     incident_id: str
     status: Literal["resolved", "escalated", "paused"]
@@ -743,9 +720,9 @@ class OrchestratorOutput(BaseModel):
 
 
 class OrchestratorRunner:
-    """The public entry point: alert_payload -> OrchestratorOutput. Used by /chat and
-    (T17) the Dynatrace webhook. Checkpoints to Redis (redis-stack) keyed by incident_id,
-    so a process killed mid-incident RESUMES from its last checkpoint on restart instead
+    """Public entry point: alert_payload -> OrchestratorOutput. Used by /chat and the
+    Dynatrace webhook. Checkpoints to Redis (redis-stack) keyed by incident_id, so a
+    process killed mid-incident resumes from its last checkpoint on restart instead
     of re-running completed agents. The whole run is one Phoenix incident span."""
 
     def __init__(self, redis_url: str | None = None) -> None:
@@ -760,8 +737,8 @@ class OrchestratorRunner:
         incident_id = alert_payload.get("incident_id") or f"INC-{uuid.uuid4().hex[:8]}"
         channel_id = alert_payload.get("channel_id", incident_id)
         user_id = alert_payload.get("user_id") or events.DEFAULT_USER
-        # The harness loop (T19) passes a per-iteration thread_id so each retry runs FRESH
-        # (not a checkpoint-resume) while keeping incident_id stable for the MR/evaluator.
+        # The harness loop passes a per-iteration thread_id so each retry runs fresh
+        # (not a checkpoint resume) while keeping incident_id stable.
         config = {"configurable": {"thread_id": alert_payload.get("thread_id") or incident_id}}
 
         async with _checkpointer(self._redis_url) as cp:
@@ -786,8 +763,8 @@ class OrchestratorRunner:
                         "trace_id": trace_id,
                         "arize_trace_url": _phoenix_trace_url(trace_id),
                     }
-                    # Commander: emit the pinned BRIEF the instant the channel opens so a third
-                    # person knows what/severity/who BEFORE any agent streams (the #1 UX gap).
+                    # Emit the pinned brief as soon as the channel opens, before any
+                    # agent streams.
                     _alert_txt = alert_payload.get("alert", "")
                     try:
                         await events.publish(user_id, events.brief(channel_id, {
@@ -802,8 +779,8 @@ class OrchestratorRunner:
                         pass
                     final = await graph.ainvoke(init, config=config)
 
-        # If the graph paused at the HITL approval gate, the decision card is already up — do
-        # NOT emit complete; the run resumes via OrchestratorRunner.resume() from POST /resume.
+        # If the graph paused at the approval gate, the decision card is already up; don't
+        # emit complete. The run resumes via OrchestratorRunner.resume() from POST /resume.
         if final.get("__interrupt__"):
             return (
                 OrchestratorOutput(
@@ -816,16 +793,16 @@ class OrchestratorRunner:
             )
 
         output = final.get("output", {})
-        # Final "complete" event — the frontend swaps the streaming placeholder for the
-        # resolved summary (MR link, notebook, customers affected, verdict).
+        # Final "complete" event: the frontend swaps the streaming placeholder for the
+        # resolved summary.
         try:
             await events.publish(
                 user_id, events.complete(channel_id, f"summary-{incident_id}", output)
             )
         except Exception:  # noqa: BLE001
             pass
-        # run_full also returns the raw final state so the eval runner (T18) can assert
-        # per-agent intermediate outputs (finding/code_finding/customer_report/…).
+        # run_full also returns the raw final state so the eval runner can assert
+        # per-agent intermediate outputs.
         return (
             OrchestratorOutput(
                 incident_id=incident_id,
@@ -838,7 +815,7 @@ class OrchestratorRunner:
         )
 
     async def resume(self, incident_id: str, decision: dict) -> OrchestratorOutput:
-        """Continue a run that PAUSED at the HITL approval gate. `decision` is the human's choice
+        """Continue a run paused at the approval gate. `decision` is the human's choice
         (e.g. {"choice": "approve"} | {"choice": "changes", "feedback": "..."}). Re-enters the
         graph from the Redis checkpoint via Command(resume=decision); the gate node's interrupt()
         returns `decision`, the run finalizes, and the complete event fires. No agents re-run."""

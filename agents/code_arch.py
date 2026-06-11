@@ -1,25 +1,12 @@
-"""CodeArch — HiveMind's code archaeologist + fix author (GitLab, thinking_level=high).
+"""CodeArch locates the faulty code, drafts a minimal patch, and lands it as a merge request.
 
-Wires to the community GitLab MCP (@zereight/mcp-gitlab) over stdio — same pattern as
-Detective's Dynatrace MCP — authenticated as the dedicated bot identity:
-GITLAB_BOT_TOKEN -> @hivemind-bot. So every branch, merge request, and comment CodeArch
-creates is attributed to the BOT, never to a human. That attribution is the whole point
-of step 11: it makes the provenance of an AI-authored change unambiguous.
+Wires to the community GitLab MCP (@zereight/mcp-gitlab) over stdio, authenticated as
+the dedicated bot identity (GITLAB_BOT_TOKEN -> @hivemind-bot), so every branch, merge
+request, and comment is attributed to the bot.
 
-(We use the community server, not GitLab's official /api/v4/mcp: the official one needs
-Premium/Ultimate + OAuth and 404s on this Free-tier account — verified empirically. The
-community server takes a static bot PAT, which is the cleaner identity story anyway.)
-
-The depth loop: locate the file -> read it -> draft a MINIMAL patch -> branch + commit
-it -> open a merge request under the bot identity with a template-stamped description ->
-post a follow-up note carrying the full cross-partner observability chain (Arize trace +
-Dynatrace notebook + Dynatrace public workflow + Mongo incident record). That note is the
-visible 'closing the loop' moment for the demo.
-
-NOTE on the prompt: ADK treats every {curly} token in an instruction as a session-state
-variable and raises KeyError on unknown ones, so the templates below use <angle> tokens
-as fill-in placeholders instead — the rendered MR/note contain the real values, no
-brackets.
+ADK treats every {curly} token in an instruction as a session-state variable and raises
+KeyError on unknown ones, so the templates below use <angle> tokens as fill-in
+placeholders instead.
 """
 
 from __future__ import annotations
@@ -50,11 +37,10 @@ _TARGET_PROJECT = os.environ.get("GITLAB_TARGET_PROJECT", "")
 def fetch_repo_tree(max_files: int = 200) -> list[str]:
     """List the target repo's files via the GitLab REST tree API (recursive).
 
-    This is how the orchestrator grounds CodeArch BEFORE the LLM runs: we hand the
-    agent the exact paths that exist so it reads a real file instead of guessing
-    (the original failure mode: ~25 "File not found" on invented paths, no MR). The
-    REST endpoint is reliable where the MCP's get_repository_tree was returning
-    "Repository or path not found". Returns [] on any error — the agent still has
+    The orchestrator injects this before the LLM runs so CodeArch reads paths
+    that exist instead of guessing (guessed paths just return "File not found").
+    The REST endpoint works where the MCP's get_repository_tree returns
+    "Repository or path not found". Returns [] on any error; the agent still has
     get_repository_tree as a fallback.
     """
     token = os.environ.get("GITLAB_BOT_TOKEN") or os.environ.get("GITLAB_TOKEN")
@@ -82,21 +68,21 @@ class CodeSearchRequest(BaseModel):
 
     channel_id: str
     question: str  # the suspected fault to fix, in plain language
-    # --- incident + diagnosis context (from Detective) ---
+    # incident + diagnosis context (from Detective)
     incident_id: str = "INC-0000"
     short_title: str = ""
     root_cause_hypothesis: str = ""
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
-    # --- the observability chain to stamp into the MR + the closing note ---
+    # observability chain to stamp into the MR and closing note
     arize_trace_url: str | None = None
     dynatrace_notebook_url: str | None = None
     workflow_public_url: str | None = None
     mongo_doc_id: str | None = None
-    # --- optional targeting hints ---
+    # optional targeting hints
     repos: list[str] = Field(default_factory=list)
     symbols: list[str] = Field(default_factory=list)
-    # The exact files that exist in the target repo (injected by the node via the
-    # GitLab REST tree API) — CodeArch picks a REAL path from here instead of guessing.
+    # Files that exist in the target repo, injected by the node via the GitLab
+    # REST tree API; CodeArch picks paths from here instead of guessing.
     repo_tree: list[str] = Field(default_factory=list)
 
 
@@ -109,7 +95,7 @@ class CodeFinding(BaseModel):
     suspect_commits: list[str] = Field(default_factory=list)
     suggested_fix: str | None = None
     confidence: float = Field(ge=0.0, le=1.0)
-    # --- the landed MR (authored by @hivemind-bot) ---
+    # the landed MR (authored by @hivemind-bot)
     source_branch: str | None = None
     merge_request_iid: int | None = None
     merge_request_url: str | None = None
@@ -117,11 +103,9 @@ class CodeFinding(BaseModel):
     pipeline_status: str | None = None
 
 
-# Community GitLab MCP (@zereight/mcp-gitlab), launched as a local stdio subprocess via
-# npx — same shape as Detective's Dynatrace MCP. ADK does NOT inherit the shell env for
-# stdio servers, so we pass the GitLab vars explicitly. CRITICAL: we hand it
-# GITLAB_BOT_TOKEN (the @hivemind-bot PAT), NOT the personal GITLAB_TOKEN — that token IS
-# the identity, so every MR/note this agent makes is authored by the bot.
+# Community GitLab MCP (@zereight/mcp-gitlab), launched as a local stdio subprocess
+# via npx. ADK does not inherit the shell env for stdio servers, so the GitLab vars
+# are passed explicitly. Authenticates as @hivemind-bot via GITLAB_BOT_TOKEN.
 gitlab_tools = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
@@ -130,29 +114,23 @@ gitlab_tools = McpToolset(
             env=mcp_env(
                 GITLAB_PERSONAL_ACCESS_TOKEN=os.environ["GITLAB_BOT_TOKEN"],
                 GITLAB_API_URL=_GITLAB_API_URL,
-                # Default project for every tool call so the agent never has to pass
-                # (or mis-pass) project_id — passing a bad project/path is what made
-                # get_repository_tree return "Repository or path not found".
+                # Default project so the agent never has to pass (or mis-pass)
+                # project_id itself.
                 GITLAB_PROJECT_ID=_TARGET_PROJECT,
                 USE_PIPELINE="true",
                 GITLAB_READ_ONLY_MODE="false",
             ),
         ),
-        # MCP calls that hit GitLab's API (file reads, MR create) can exceed ADK's default
-        # 5s request timeout. Give them headroom like Detective does.
+        # GitLab API calls (file reads, MR create) can exceed ADK's default 5s
+        # MCP request timeout.
         timeout=60.0,
     ),
-    # Expose ONLY the fix-loop tools. Keeps CodeArch on-rails and structurally out of the
-    # destructive surface (no delete_*, no force-push) it has no business touching.
+    # Only the fix-loop tools: keeps CodeArch out of the destructive surface
+    # (no delete_*, no force-push).
     tool_filter=[
-        # Ground FIRST in the repo's real layout. get_repository_tree lists the files
-        # that ACTUALLY exist, so CodeArch reads real paths instead of inventing them —
-        # the demo's original failure mode was ~25 "File not found" on guessed paths
-        # (go.mod, checkout-service/…) because it had no way to see the tree.
-        "get_repository_tree",
-        # Code search is OPTIONAL: this server build may not expose a search tool (it
-        # didn't expose search_project_code). The loop falls back to get_file_contents.
-        # Kept here so it's used automatically if a future build does expose it.
+        "get_repository_tree",  # fallback listing when repo_tree injection is empty
+        # This server build may not expose a search tool; the loop falls back to
+        # get_file_contents.
         "search_project_code",
         "search_code",
         "get_file_contents",  # read / browse to the candidate file

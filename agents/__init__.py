@@ -1,20 +1,9 @@
 """HiveMind agent package.
 
-Importing this package turns on Phoenix tracing (T13): the OpenInference
-GoogleADKInstrumentor patches ADK so every Gemini call, agent/tool span, and
-LangGraph node is exported to our Phoenix instance, where phoenix-mcp can read
-those traces back for the Reviewer's meta-loop.
-
-It runs here, at package import, because OTEL instrumentation only captures the
-process it runs in. Putting it in __init__.py means it fires exactly once in
-whatever loads the agents — including the module shipped via `adk deploy`, not
-just a local entry point — which is the failure mode the task warns about
-(traces vanishing post-deploy).
-
-Backend is config, not code: PHOENIX_COLLECTOR_ENDPOINT (+ optional
-PHOENIX_API_KEY) selects self-hosted Phoenix today and Phoenix Cloud for the
-hosted demo later — the register() call below is byte-for-byte identical for
-both.
+Importing this package registers Phoenix/OTEL tracing once per process: the
+OpenInference GoogleADKInstrumentor patches ADK so Gemini calls, agent/tool
+spans, and LangGraph nodes export to Phoenix. The collector endpoint comes
+from PHOENIX_COLLECTOR_ENDPOINT (PHOENIX_API_KEY optional).
 """
 
 from __future__ import annotations
@@ -33,9 +22,8 @@ try:
     from phoenix.otel import register
 
     _endpoint = os.getenv("PHOENIX_COLLECTOR_ENDPOINT", "http://localhost:6006")
-    # Skip tracing when there's no reachable collector (e.g. a cloud deploy with no Phoenix):
-    # otherwise the batch exporter retries localhost:6006 forever and floods the logs. The
-    # Reviewer simply falls back to its default rubric, exactly as it does today.
+    # Skip tracing when there's no reachable collector: otherwise the batch
+    # exporter retries localhost:6006 forever and floods the logs.
     if os.getenv("PHOENIX_DISABLE", "").lower() in ("1", "true", "yes") or not _endpoint:
         raise RuntimeError("Phoenix tracing disabled (PHOENIX_DISABLE set or no endpoint)")
     _tracer_provider = register(
@@ -43,13 +31,13 @@ try:
         project_name=os.getenv("PHOENIX_PROJECT", "hivemind"),
         api_key=os.getenv("PHOENIX_API_KEY"),  # None for self-host; set for Cloud
         protocol="http/protobuf",
-        batch=True,  # batch export, like production
+        batch=True,
         auto_instrument=False,  # we attach the ADK instrumentor ourselves
         set_global_tracer_provider=True,
     )
     GoogleADKInstrumentor().instrument(tracer_provider=_tracer_provider)
 except Exception as exc:  # noqa: BLE001
-    # Never let tracing setup break the agent package — degrade to "no tracing"
+    # Never let tracing setup break the agent package; degrade to "no tracing"
     # (e.g. Phoenix not running) but make the skip loud.
     warnings.warn(
         f"Phoenix tracing disabled: {type(exc).__name__}: {exc}", stacklevel=2
