@@ -1,6 +1,6 @@
 import { NavBar } from "@/components/landing/navbar";
 import { Hero } from "@/components/landing/hero";
-import { LandingWarRoom } from "@/components/landing/war-room";
+import { LaunchVideo } from "@/components/landing/launch-video";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Crew } from "@/components/landing/crew";
 import { Proof } from "@/components/landing/proof";
@@ -21,18 +21,18 @@ export default function Landing() {
           <Hero />
         </div>
 
-        {/* The product, playing for real: the dark war room framed against the light page. */}
+        {/* The launch film, framed dark against the light page. */}
         <section id="demo" className="relative mx-auto mt-52 w-full max-w-6xl scroll-my-24 px-4 xl:px-0">
           <GuideLines />
           <Reveal className="mx-auto mb-12 max-w-2xl text-center">
             <Eyebrow>See it work</Eyebrow>
             <Headline>One real incident, start to finish</Headline>
             <p className="mt-5 text-balance text-gray-700">
-              This is the actual war room. It plays through once on its own. Replay it any time.
+              Watch the crew take a real incident from page to verified fix in 90 seconds.
             </p>
           </Reveal>
           <Reveal delay={0.05}>
-            <LandingWarRoom />
+            <LaunchVideo />
           </Reveal>
         </section>
 
