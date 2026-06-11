@@ -13,7 +13,7 @@ import {
   BRAND_COLOR,
 } from "./brand-logos";
 
-// ── Illustration 1: the partner systems orbiting the hive, Dynatrace raising a problem ──────────
+// Illustration 1: partner systems orbiting the hive, Dynatrace raising a problem.
 const ORBIT_MARKS = [
   { Logo: DynatraceLogo, color: BRAND_COLOR.dynatrace, alert: true },
   { Logo: ElasticLogo, color: BRAND_COLOR.elastic },
@@ -64,7 +64,7 @@ function DetectOrbit() {
   );
 }
 
-// ── Illustration 2: live telemetry converging into a single merge request ───────────────────────
+// Illustration 2: live telemetry converging into a single merge request.
 const SIGNALS = [
   { label: "p95", value: "1,320ms", top: 24, left: 8 },
   { label: "errors", value: "1,271", top: 120, left: 196 },
@@ -115,7 +115,7 @@ function FixConverge() {
   );
 }
 
-// ── Illustration 3: latency recovering past the SLO, SRG flipping fail → pass ────────────────────
+// Illustration 3: latency recovering past the SLO, SRG flipping fail to pass.
 function RecoveryChart() {
   // x: 0..300, y: 0..140. A spike, then a sharp drop after the fix at x≈150.
   const pts = [
@@ -162,7 +162,6 @@ function RecoveryChart() {
   );
 }
 
-// ── The section ────────────────────────────────────────────────────────────────────────────────
 const STEPS = [
   {
     eyebrow: "1. It catches the problem",

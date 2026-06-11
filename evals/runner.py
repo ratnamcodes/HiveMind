@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Scenario eval runner (T18-A).
+"""Scenario eval runner.
 
 For each scenario in evals/scenarios/*.json: fires the synthetic alert through the
 orchestrator, captures the Phoenix trace, and scores the run:
-  - deterministic assertions — expected_intermediates (the tools each agent called +
+  - deterministic assertions: expected_intermediates (the tools each agent called +
     the fields it populated) and expected_final (mr_filed / notebook_created /
     customers_identified / severity_within);
-  - grounding score — one LLM-as-judge call per scenario scoring each hop against
+  - grounding score: one LLM-as-judge call per scenario scoring each hop against
     evals/rubric.md (the hivemind-grounding-rubric).
 Outputs JSON: per-scenario pass/fail + scores + trace link + a 1-line diff for failures,
 plus a pass_rate summary.
 
-LIVE: each scenario is a full orchestrator run that opens a REAL MR; the runner closes +
+Each scenario is a full live orchestrator run that opens a real MR; the runner closes +
 deletes those bot MRs afterward (unless --keep-mrs). Default --limit 3 to keep it sane.
 
 Run:  .venv/bin/python evals/runner.py --limit 3
@@ -68,7 +68,7 @@ def load_scenarios() -> list[dict]:
 
 async def _collect_tool_calls(user_id: str, tools_by_agent: dict, stop: asyncio.Event) -> None:
     """Subscribe to the orchestrator's event bus and record tool_call status events per
-    agent (reuses the T17 stream), until `stop` is set."""
+    agent, until `stop` is set."""
     redis = redis_from_url(
         os.getenv("REDIS_URL", "redis://localhost:6379"), decode_responses=True
     )
@@ -161,7 +161,7 @@ def _rubric() -> str:
 
 
 def _grounding_score(sc: dict, final: dict) -> dict | None:
-    """One LLM-as-judge call scoring each hop against the rubric. Best-effort — returns
+    """One LLM-as-judge call scoring each hop against the rubric. Best-effort: returns
     an {error} dict on any failure so it never fails the scenario."""
     try:
         from google import genai
@@ -175,7 +175,7 @@ def _grounding_score(sc: dict, final: dict) -> dict | None:
             'Return ONLY JSON: {"hops": {"<agent>": {"score": <0..1>, "reason": "..."}}, '
             '"overall": <0..1>}.'
         )
-        # Vertex (the project's Google Cloud billing), not the Developer-API key pool.
+        # Route through Vertex, not the Developer-API key pool.
         client = genai.Client(
             vertexai=True,
             project=os.environ.get("GOOGLE_CLOUD_PROJECT", ""),
@@ -233,7 +233,7 @@ async def run_scenario(
     final: dict = {}
     timed_out = False
     try:
-        # Per-scenario hard timeout — a hung agent/LLM call must never freeze the suite.
+        # Per-scenario hard timeout: a hung agent/LLM call must never freeze the suite.
         out, final = await asyncio.wait_for(
             OrchestratorRunner().run_full(alert_payload), timeout=timeout
         )

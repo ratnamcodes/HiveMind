@@ -2,16 +2,12 @@ import crypto from "node:crypto";
 import { cookies } from "next/headers";
 
 // Email/password auth: scrypt-hashed passwords + an HMAC-signed httpOnly session cookie.
-// The user records live in the backend (Atlas via /api/users) — NOT on the local filesystem,
-// because the frontend runs on Vercel where the filesystem is ephemeral and read-only, so a
-// file store made signup 500 and signin always fail. Password hashing/verification stays here;
-// the backend is just the persistent record store.
+// User records live in the backend (Vercel's filesystem is ephemeral); hashing and signing stay here.
 
 const SECRET = process.env.HIVEMIND_AUTH_SECRET || "hivemind-dev-secret-change-in-prod-0xA1";
 export const SESSION_COOKIE = "hm_session";
 
-// Server-side calls to the backend user store. NEXT_PUBLIC_* are inlined at build time and also
-// readable server-side, so they work as a fallback when HIVEMIND_BACKEND_URL isn't set.
+// NEXT_PUBLIC_* vars are readable server-side too, so they serve as fallbacks when HIVEMIND_BACKEND_URL isn't set.
 const BACKEND = (
   process.env.HIVEMIND_BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_BASE ||
@@ -95,8 +91,7 @@ export async function signIn(email: string, password: string) {
   return { ok: true as const, token: sign(email), email };
 }
 
-// The signed-in user's email from the httpOnly session cookie, or null. Use in server components
-// / layouts to gate the product (the war room and onboarding) behind sign-in.
+// The signed-in user's email from the session cookie, or null.
 export async function currentUserEmail(): Promise<string | null> {
   const store = await cookies();
   return verifySession(store.get(SESSION_COOKIE)?.value);

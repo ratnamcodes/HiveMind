@@ -1,8 +1,4 @@
 // Core domain types for the HiveMind war-room UI.
-// The shapes here mirror what the real backend will eventually return (see the
-// orchestrator's incident output: incident_id, mr_url, notebook_url,
-// customers_affected, verdict, arize_trace_url) so swapping mocks for the live
-// REST API is a base-URL change, not a refactor.
 
 export type AgentId =
   | "detective"
@@ -27,7 +23,6 @@ export interface StatusPill {
 
 export interface Channel {
   id: string;
-  /** Display name without the leading "#", e.g. "ops" or "inc-checkout-latency". */
   name: string;
   kind: ChannelKind;
   /** Incident channels carry a severity that drives the sidebar color stripe. */
@@ -36,7 +31,6 @@ export interface Channel {
   unread: number;
   /** Freshly-opened incident channel → triggers the sidebar pulse animation. */
   isNew?: boolean;
-  /** Short channel topic shown in the header. */
   topic?: string;
   /** Resolved incidents render dimmed with a check. */
   resolved?: boolean;
@@ -57,7 +51,6 @@ export interface Message {
   channelId: string;
   author: Author;
   text: string;
-  /** ISO-8601 timestamp. */
   ts: string;
   /** Present on agent messages to show thinking / tool_call / done. */
   pill?: StatusPill;
@@ -79,7 +72,7 @@ export interface Thread {
   messages: Message[];
 }
 
-/** The pinned Incident Commander brief — the 5-second "what / impact / who" a newcomer reads. */
+/** Pinned incident brief. */
 export interface Brief {
   headline: string;
   what: string;

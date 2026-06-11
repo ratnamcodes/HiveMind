@@ -14,9 +14,8 @@ import {
 import { AGENTS, AGENT_IDS } from "@/lib/agents";
 import { cn } from "@/lib/utils";
 
-// A read-only recreation of the real war room playing one incident from start to finish. It begins
-// when it scrolls into view, plays through exactly ONCE, and then rests on the resolved state — no
-// looping. A Replay control lets you watch it again. Nothing calls the backend.
+// Read-only war-room replay of one incident: plays once when scrolled into view, then rests on
+// the resolved state until Replay is clicked.
 
 type AgentKey = keyof typeof AGENTS;
 
@@ -37,7 +36,7 @@ const SCRIPT: Beat[] = [
   { t: "resolved" },
 ];
 
-// Dwell time AFTER a beat appears, before the next one is revealed.
+// Dwell time after a beat appears, before revealing the next.
 const DUR: Record<Beat["t"], number> = { agent: 1350, approve: 1300, recovery: 1900, resolved: 2200 };
 const START_DELAY = 650;
 
@@ -46,7 +45,7 @@ export function LandingWarRoom() {
   const feedRef = useRef<HTMLDivElement>(null);
   const inView = useInView(rootRef, { once: true, margin: "-120px 0px -120px 0px" });
 
-  // `n` = number of beats revealed (0 = only the incident brief).
+  // Number of beats revealed; 0 shows only the incident brief.
   const [n, setN] = useState(0);
   const done = n >= SCRIPT.length;
 

@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 
-// The Solar signature: dashed vertical "guide lines" flanking a section, and a faint diagonal
-// hatch fill behind illustration panels. Both are decorative and pointer-events-none.
+// Decorative dashed guide lines flanking a section, plus a diagonal hatch fill for illustration panels.
 
 function VLine({ className }: { className?: string }) {
   return (

@@ -1,4 +1,4 @@
-"""LogDiver — HiveMind's log specialist (Elastic, thinking_level=low)."""
+"""LogDiver digs through Elastic for the log evidence behind an incident."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from hivemind.memory import Severity
 load_dotenv()
 
 # The Elastic Agent Builder MCP, hosted by Kibana. LogDiver authenticates with
-# the read-only ELASTIC_API_KEY — it can search logs, never write or delete them.
+# the read-only ELASTIC_API_KEY: it can search logs, never write or delete them.
 elastic_mcp = McpToolset(
     connection_params=StreamableHTTPConnectionParams(
         url=f"{os.environ['KIBANA_URL']}/api/agent_builder/mcp",

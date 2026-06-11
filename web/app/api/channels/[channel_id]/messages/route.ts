@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { addMessage, getMessages, markRead } from "@/lib/mock/data";
 
-// GET /api/channels/:channel_id/messages — chronological messages for a channel.
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ channel_id: string }> },
@@ -11,7 +10,6 @@ export async function GET(
   return NextResponse.json(getMessages(channel_id));
 }
 
-// POST /api/channels/:channel_id/messages — append a user message.
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ channel_id: string }> },

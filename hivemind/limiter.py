@@ -85,13 +85,10 @@ async def acquire(
 def tool_call_budget(max_calls: int = DEFAULT_TOOL_BUDGET) -> "BeforeToolCallback":
     """Return an ADK ``before_tool_callback`` that caps tool calls per run.
 
-    Where :func:`acquire` bounds *concurrency*, this bounds *depth*: it stops a
-    specialist (e.g. LogDiver) from grinding through dozens of Elastic queries on
-    a single question. ADK runs the callback before every tool call — returning
-    ``None`` lets it proceed, returning a dict short-circuits the call and feeds
-    that dict back as the tool's result. We count calls in the delta-aware
-    session state keyed by ``invocation_id`` so each fresh investigation starts
-    with a full budget, then hand back an error once the budget is spent.
+    ADK runs the callback before every tool call: returning ``None`` lets it
+    proceed, returning a dict short-circuits the call and feeds that dict back
+    as the tool's result. Calls are counted in session state keyed by
+    ``invocation_id`` so each fresh investigation starts with a full budget.
     """
 
     def _before_tool(

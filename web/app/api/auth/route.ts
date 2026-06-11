@@ -1,7 +1,7 @@
 import { SESSION_COOKIE, signIn, signUp, verifySession } from "@/lib/session";
 
-// POST { action: "signin" | "signup" | "signout", email, password, name } — sets/clears the
-// httpOnly session cookie. GET returns the current session (for the client to know who's in).
+// POST { action: "signin" | "signup" | "signout", email, password, name } sets or clears the
+// httpOnly session cookie. GET returns the current session.
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));

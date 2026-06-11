@@ -1,14 +1,13 @@
-"""Reviewer — HiveMind's critic, Phoenix-backed (T13).
+"""Reviewer: HiveMind's Phoenix-backed critic.
 
-- Rubric (system prompt) is pulled at runtime from Phoenix prompt management (the
-  `production`-tagged `hivemind-critic-rubric`) via an ADK instruction provider, so
-  a T18 retag ships a new rubric without redeploy.
-- Carries the Phoenix MCP toolset (read traces, manage the rubric prompt, read
-  datasets/experiments) — the meta-loop "seeds".
+- The rubric (system prompt) is pulled at runtime from Phoenix prompt management
+  (the `production`-tagged `hivemind-critic-rubric`) via an ADK instruction
+  provider, so retagging ships a new rubric without a redeploy.
+- Carries the Phoenix MCP toolset for prompt management.
 - `review()` runs the critic inside one OTEL span, captures that run's Phoenix
-  trace URL (for CodeArch to stamp into the MR — T11), and writes the verdict as a
-  span annotation the T18 flywheel mines for critic miss-patterns. (phoenix-mcp has
-  no write-annotation tool, so the annotation goes through the phoenix-client SDK.)
+  trace URL (CodeArch stamps it into the MR), and writes the verdict as a span
+  annotation the flywheel mines for critic miss-patterns. (phoenix-mcp has no
+  write-annotation tool, so the annotation goes through the phoenix-client SDK.)
 
 Its input is the *output* of any other agent, so it imports their output schemas.
 """
@@ -45,8 +44,8 @@ PRODUCTION_TAG = "production"
 _PHOENIX_HOST = os.getenv("PHOENIX_HOST", "http://localhost:6006").rstrip("/")
 _PHOENIX_PROJECT = os.getenv("PHOENIX_PROJECT", "hivemind")
 
-# Baked-in copy of the seed v1 rubric — used ONLY as a fallback when Phoenix is
-# unreachable, so the Reviewer always constructs with a usable instruction.
+# Fallback rubric for when Phoenix is unreachable, so the Reviewer always
+# constructs with a usable instruction.
 CRITIC_RUBRIC_FALLBACK = (
     "You are Reviewer, the critic of HiveMind. You score every agent output "
     "against the rubric and reject anything ungrounded, contradicted by "
@@ -71,7 +70,7 @@ def _pull_production_rubric() -> str:
     pv = Client(base_url=_PHOENIX_HOST).prompts.get(
         prompt_identifier=PROMPT_NAME, tag=PRODUCTION_TAG
     )
-    messages = pv._template["messages"]  # noqa: SLF001 — see docstring
+    messages = pv._template["messages"]  # noqa: SLF001
     system_text = "\n\n".join(
         m["content"]
         for m in messages
@@ -84,7 +83,7 @@ def _pull_production_rubric() -> str:
 
 def load_rubric(_ctx: object = None) -> str:
     """ADK instruction provider: the current production rubric (re-fetched per
-    invocation, so a T18 retag ships live). Falls back to last good, then baked-in."""
+    invocation, so a retag ships live). Falls back to last good, then baked-in."""
     global _last_good_rubric
     try:
         _last_good_rubric = _pull_production_rubric()
@@ -98,8 +97,6 @@ def load_rubric(_ctx: object = None) -> str:
         return _last_good_rubric or CRITIC_RUBRIC_FALLBACK
 
 
-# ---- schemas --------------------------------------------------------------
-# An agent output is ANY ONE of these five shapes.
 AgentOutput = (
     InvestigationFinding
     | LogTriageReport
@@ -132,19 +129,17 @@ class CriticVerdict(BaseModel):
     verdict: Literal["approve", "revise", "escalate"]
     rubric_findings: list[RubricFinding] = Field(default_factory=list)
     rewrite_hint: str | None = None
-    # On a `revise` verdict, which specialist should redo its work (orchestrator
-    # routing — `rewrite_hint` is the human-readable "why", this is the machine target).
+    # On a `revise` verdict, which specialist should redo its work; `rewrite_hint`
+    # is the human-readable "why", this is the machine routing target.
     revise_target: (
         Literal["detective", "log_diver", "code_arch", "customer_liaison"] | None
     ) = None
 
 
-# ---- Phoenix MCP toolset (the meta-loop "seeds") --------------------------
-# Same self-hosted Phoenix the traces land in; we spread os.environ so the
-# `/usr/bin/env node` shebang resolves and PHOENIX_HOST/PHOENIX_API_KEY (if set,
-# for Cloud) reach the subprocess. NOTE the spec's literal env
-# (PHOENIX_API_KEY=ARIZE_API_KEY, PHOENIX_BASE_URL=app.arize.com) 401s — proven —
-# because phoenix-mcp speaks the Phoenix API, not Arize AX.
+# Same self-hosted Phoenix the traces land in; os.environ is spread so the
+# `/usr/bin/env node` shebang resolves and PHOENIX_HOST/PHOENIX_API_KEY (if set)
+# reach the subprocess. phoenix-mcp speaks the Phoenix API, not Arize AX;
+# ARIZE_* creds 401.
 phoenix_tools = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
@@ -154,13 +149,9 @@ phoenix_tools = McpToolset(
         ),
         timeout=30.0,
     ),
-    # ONLY bounded-payload tools here. The trace/span/dataset/experiment readers
-    # (get-spans, list-traces, get-trace, get-dataset, …) return UNBOUNDED payloads —
-    # Phoenix accumulates every incident's spans — and feeding one back to the model
-    # blew past Gemini's 1M-token context (400 INVALID_ARGUMENT), killing the reviewer
-    # node mid-incident. The verdict is rendered from the agent outputs already in the
-    # prompt plus the rubric, so the reviewer never needs to pull raw traces here. Span
-    # annotations (T18) go through the phoenix-client SDK in review(), not these tools.
+    # Bounded-payload tools only: the trace/span/dataset readers return unbounded
+    # payloads that can blow past Gemini's 1M-token context. Span annotations go
+    # through the phoenix-client SDK in review(), not these tools.
     tool_filter=[
         "list-prompts",
         "get-prompt",
@@ -174,7 +165,7 @@ phoenix_tools = McpToolset(
 reviewer = Agent(
     name="reviewer",
     model="gemini-3.5-flash",
-    instruction=load_rubric,  # runtime pull of the production rubric (T13 step 5)
+    instruction=load_rubric,  # runtime pull of the production rubric
     output_schema=CriticVerdict,
     generate_content_config=types.GenerateContentConfig(
         thinking_config=types.ThinkingConfig(thinking_level="high"),
@@ -183,21 +174,19 @@ reviewer = Agent(
 )
 
 
-# ---- review(): run the critic, capture the trace, annotate the span -------
 class ReviewResult(BaseModel):
     """What the orchestrator gets back from a review pass."""
 
     verdict: CriticVerdict
-    arize_trace_url: str  # Phoenix deep-link; CodeArch stamps it into the MR (T11)
+    arize_trace_url: str  # Phoenix deep-link; CodeArch stamps it into the MR
     reviewer_span_id: str
     annotation_written: bool
 
 
 def _phoenix_trace_url(trace_id: str) -> str:
-    """Deep-link to this run's trace in the Phoenix UI. localhost today; becomes a
-    Phoenix Cloud URL once PHOENIX_HOST points there — identical shape."""
+    """Deep-link to this run's trace in the Phoenix UI."""
     global _project_id_cache
-    if not _project_id_cache:  # None or "" — never cache an empty miss; retry next time
+    if not _project_id_cache:  # None or "": never cache an empty miss; retry next time
         import httpx
 
         try:
@@ -289,9 +278,9 @@ async def review(payload: AnyAgentOutput) -> ReviewResult:
             f"Reviewer did not return a valid CriticVerdict: {e}\nraw: {final_text[:500]}"
         ) from e
 
-    # Flush so Phoenix has the span. Annotate FIRST: its retry loop waits out
-    # Phoenix's async ingestion, which also guarantees the project now exists — so
-    # the trace-URL lookup resolves to the project id, not a name fallback.
+    # Flush so Phoenix has the span. Annotate before building the trace URL: the
+    # annotation's retry loop waits out Phoenix's async ingestion, so the project
+    # exists by the time the URL lookup runs.
     otel_trace.get_tracer_provider().force_flush()
     annotated = await _annotate_verdict(span_id, verdict)
     trace_url = _phoenix_trace_url(trace_id)

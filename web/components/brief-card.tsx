@@ -7,8 +7,7 @@ import { useWarRoom } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { AgentAvatar } from "./agent-avatar";
 
-/** The pinned Incident Commander brief — the first thing a third person reads when a channel
- *  opens: what happened, how bad, who's on it, and (once Liaison reports) the business impact. */
+/** The pinned Incident Commander brief: the first thing a third person reads when a channel opens. */
 export function BriefCard({ channelId }: { channelId: string }) {
   const brief = useWarRoom((s) => s.briefByChannel[channelId]);
   if (!brief) return null;

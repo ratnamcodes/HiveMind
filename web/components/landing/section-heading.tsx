@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-// The Solar section header: a small amber eyebrow with a left tick, then a large headline.
-// `inline-block` keeps the tick glued to the text in both left-aligned and centered sections.
-// The headline carries the real heading semantics (h2/h3); the eyebrow is a styled label.
+// `inline-block` keeps the eyebrow's tick glued to the text in both left-aligned and centered sections.
 
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (

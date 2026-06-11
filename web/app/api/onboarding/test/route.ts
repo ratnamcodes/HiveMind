@@ -1,7 +1,7 @@
-// Real "Test connection" — validates the credentials the user pastes by calling the live
+// "Test connection" validates the credentials the user pastes by calling the
 // Dynatrace + GitLab APIs server-side. If a field is blank, it falls back to server-side env
 // vars (set these in the deploy: DT_ENVIRONMENT/DT_API_TOKEN/GITLAB_URL/GITLAB_TOKEN). Returns
-// the real identity it connected as, and a human-readable reason on failure.
+// the identity it connected as, and a human-readable reason on failure.
 
 const envFallback = (key: string): string => (process.env[key] || "").trim();
 

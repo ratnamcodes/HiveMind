@@ -1,10 +1,10 @@
 """Environment for stdio MCP subprocesses.
 
-ADK launches stdio MCP servers (npx / uvx) as child processes and does NOT inherit our
-environment, so we must hand them PATH (to locate the npx/uvx binaries) and HOME (npm and uv
-write their caches there) explicitly. Locally these happen to resolve; in a minimal container
-env they do not, and the spawn fails with "[Errno 2] No such file or directory". Cache dirs
-default under /tmp, which is writable on Cloud Run.
+ADK launches stdio MCP servers (npx / uvx) as child processes without inheriting our
+environment, so we hand them PATH (to locate the npx/uvx binaries) and HOME (npm and uv
+write their caches there) explicitly; otherwise the spawn fails in minimal container envs
+with "[Errno 2] No such file or directory". Cache dirs default under /tmp, which is
+writable on Cloud Run.
 """
 
 from __future__ import annotations

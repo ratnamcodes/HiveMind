@@ -1,7 +1,7 @@
-"""Typed real-time event bus for the war room (T17).
+"""Typed real-time event bus for the war room.
 
-The orchestrator and the Dynatrace webhook PUBLISH typed events to a per-user Redis
-pub/sub channel `events:{user_id}`; the /ws WebSocket handler SUBSCRIBES and forwards
+The orchestrator and the Dynatrace webhook publish typed events to a per-user Redis
+pub/sub channel `events:{user_id}`; the /ws WebSocket handler subscribes and forwards
 them to the browser, which streams tokens, updates agent status pills, and materializes
 new incident channels live.
 
@@ -32,7 +32,6 @@ async def publish(user_id: str, event: dict[str, Any]) -> None:
     await get_redis().publish(channel_name(user_id), json.dumps(event, default=str))
 
 
-# --- typed event builders --------------------------------------------------
 def channel_created(channel: dict[str, Any]) -> dict[str, Any]:
     return {"type": "channel_created", "channel": channel}
 
@@ -75,17 +74,14 @@ def complete(
     }
 
 
-# --- legibility events (so a third person instantly understands the channel) ---
 def brief(channel_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-    """The pinned Incident Commander BRIEF card, emitted the instant the channel opens —
-    the 5-second 'what / impact / severity / suspected / who's on it' a newcomer reads first.
+    """Pinned Incident Commander brief card, emitted when the channel opens.
     fields: {headline, what, impact, severity, suspected, team:[agent_id]}."""
     return {"type": "brief", "channel_id": channel_id, **fields}
 
 
 def reasoning(channel_id: str, agent_id: str, text: str) -> dict[str, Any]:
-    """A one-line 'why I'm doing this' an agent narrates BEFORE its tool calls — turns the
-    fire-and-forget spinner into visible, expertise-supportive thinking."""
+    """One-line 'why I'm doing this' an agent narrates before its tool calls."""
     return {
         "type": "reasoning",
         "channel_id": channel_id,
@@ -95,23 +91,22 @@ def reasoning(channel_id: str, agent_id: str, text: str) -> dict[str, Any]:
 
 
 def impact(channel_id: str, fields: dict[str, Any]) -> dict[str, Any]:
-    """A business-impact update for the right-rail panel: customers + revenue at risk, by name.
+    """Business-impact update for the right-rail panel.
     fields: {customers_affected, revenue_at_risk_usd, segments:[...], named:[{id,plan,mrr}], summary}."""
     return {"type": "impact", "channel_id": channel_id, **fields}
 
 
-# --- human-in-the-loop events (the run pauses and asks a person) ---
 def decision_request(channel_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    """The run has PAUSED at a high-stakes step and needs a human. Rendered as an inline
+    """The run has paused at a high-stakes step and needs a human. Rendered as an inline
     approval card. payload: {decision_id, kind, title, prompt, mr_url?, diff_summary?, impact?,
-    options:[{id,label,style?}]}. Nothing irreversible has happened yet."""
+    options:[{id,label,style?}]}."""
     return {"type": "decision_request", "channel_id": channel_id, **payload}
 
 
 def decision_made(
     channel_id: str, decision_id: str, choice: str, detail: str = ""
 ) -> dict[str, Any]:
-    """Audit line after the human (or the timeout default) decides — clears the approval card."""
+    """Audit line after the human (or the timeout default) decides; clears the approval card."""
     return {
         "type": "decision_made",
         "channel_id": channel_id,

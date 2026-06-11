@@ -47,7 +47,6 @@ export function FadeSpan({ children, className }: { children: ReactNode; classNa
   );
 }
 
-// Scroll-triggered reveal for the sections that live below the fold.
 export function Reveal({
   children,
   className,

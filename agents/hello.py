@@ -1,4 +1,4 @@
-"""Minimal ADK 2.0 agent demonstrating Gemini 3.5 function calling end-to-end."""
+"""Minimal ADK 2.0 agent demonstrating Gemini 3.5 function calling."""
 
 from __future__ import annotations
 

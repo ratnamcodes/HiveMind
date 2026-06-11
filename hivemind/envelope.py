@@ -1,3 +1,5 @@
+"""Signed agent envelope; currently exercised only by its test."""
+
 from __future__ import annotations
 
 import hashlib

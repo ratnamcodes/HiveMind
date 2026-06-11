@@ -1,4 +1,4 @@
-"""Detective — HiveMind's lead diagnostician (Dynatrace, thinking_level=high)."""
+"""Detective investigates alerts against Dynatrace and returns a grounded root-cause finding."""
 
 from __future__ import annotations
 
@@ -46,22 +46,18 @@ class InvestigationFinding(BaseModel):
     implicated_service: str | None = None
     implicated_deploy: str | None = None
     notebook_url: str | None = None
-    # Reserved for T11 (publishing the investigation as a public workflow URL so
-    # judges can click through from the GitLab MR). The gated automation:workflows:*
-    # tools live in that task — this loop leaves the field null.
+    # Always null today; set when workflow publishing is wired.
     workflow_public_url: str | None = None
-    # Hive routing — kept from Detective's original contract so it can still hand
-    # the investigation to the right specialist.
+    # Routing: which specialist should pick up the investigation next.
     handoff_to: Literal["LogDiver", "CodeArch", "CustomerLiaison", "none"] = "none"
     recommended_next_step: str
 
 
-# The Dynatrace MCP, launched as a local stdio subprocess via npx. ADK does NOT
-# inherit the shell environment for stdio servers, so we pass DT_* explicitly.
-# Two things the smoke test pinned down: the server authenticates with a Platform
-# Token (dt0s16…) under DT_PLATFORM_TOKEN — never the classic dt0c01 DT_API_TOKEN —
-# and it rejects classic `.live` URLs, so we hand it the `.apps` platform URL
-# derived from DT_ENVIRONMENT.
+# The Dynatrace MCP, launched as a local stdio subprocess via npx. ADK does not
+# inherit the shell environment for stdio servers, so DT_* is passed explicitly.
+# The server authenticates with a Platform Token (dt0s16…) under DT_PLATFORM_TOKEN,
+# not the classic dt0c01 DT_API_TOKEN, and it rejects classic `.live` URLs, so it
+# gets the `.apps` platform URL derived from DT_ENVIRONMENT.
 dynatrace_tools = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
@@ -74,14 +70,12 @@ dynatrace_tools = McpToolset(
             ),
         ),
         # Davis CoPilot tools (nl2dql, analyzers, copilot chat) are LLM-backed and
-        # routinely take >5s; ADK's default 5s MCP request timeout was killing
-        # generate_dql_from_natural_language mid-loop. Give them real headroom.
+        # routinely take longer than ADK's default 5s MCP request timeout.
         timeout=60.0,
     ),
-    # Expose ONLY the investigation-loop tools. Keeps Detective on-rails — no
-    # wandering into entity/problem explorers that 403 on scopes we didn't grant
-    # and burn its budget — and structurally removes the gated, destructive writes
-    # (send_email, make_workflow_public, …) from the agent's reach.
+    # Only the investigation-loop tools: keeps Detective out of entity/problem
+    # explorers that 403 on ungranted scopes, and away from the gated writes
+    # (send_email, make_workflow_public, …).
     tool_filter=[
         "generate_dql_from_natural_language",
         "verify_dql",

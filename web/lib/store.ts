@@ -1,12 +1,8 @@
 "use client";
 
-// Client state for the war-room: which channel is open, a per-channel message
-// cache, optimistic posts, AND live events from the /ws stream (T17): streaming
-// tokens, agent status pills, and channels that materialize from a Dynatrace alert.
-//
-// WS events are applied in BATCHES (applyEvents) — the hook coalesces a burst into
-// one set() per animation frame, so a flood of tokens/status is one re-render, not
-// hundreds. That keeps the UI (and client-side navigation) responsive under load.
+// Client state for the war-room: open channel, per-channel message cache,
+// optimistic posts, and live events from the /ws stream.
+// WS events are applied in batches via applyEvents (see useEventStream).
 
 import { create } from "zustand";
 import * as api from "@/lib/api";
@@ -33,8 +29,7 @@ interface WarRoomState {
   channels: Channel[];
   channelsLoaded: boolean;
   messagesByChannel: Record<string, Message[]>;
-  loadingMessages: Record<string, boolean>;
-  /** Channels created live over WS — their messages come from events, not REST. */
+  /** Channels created live over WS: their messages come from events, not REST. */
   liveChannels: Record<string, true>;
   /** The pinned Incident Commander brief per channel (what / impact / who). */
   briefByChannel: Record<string, Brief>;
@@ -46,8 +41,7 @@ interface WarRoomState {
   sendMessage: (channelId: string, text: string) => Promise<void>;
   markChannelRead: (channelId: string) => void;
   applyEvents: (evs: WarRoomEvent[]) => void;
-  applyEvent: (ev: WarRoomEvent) => void;
-  /** Human clicked a button on an approval card — resume the paused run on the backend. */
+  /** Human clicked a button on an approval card: resume the paused run on the backend. */
   respondToDecision: (
     incidentId: string,
     channelId: string,
@@ -65,7 +59,7 @@ function authorFor(agentId: string): Message["author"] {
   return { type: "system" };
 }
 
-/** An agent gets ONE streaming bubble per run (so its status pills and streamed
+/** An agent gets one streaming bubble per run (so its status pills and streamed
  *  summary land together); system messages stay distinct per message_id. */
 function liveKey(channelId: string, agentId: string, messageId: string): string {
   return agentId === "system"
@@ -83,8 +77,7 @@ function completeLinks(payload: Record<string, unknown>): MessageLink[] {
   return links;
 }
 
-// The slice of state an event can touch. reduceEvent is pure so a batch folds into
-// one new state object → one re-render.
+// The slice of state an event can touch; reduceEvent is pure.
 type EventSlice = Pick<
   WarRoomState,
   "channels" | "messagesByChannel" | "liveChannels" | "briefByChannel" | "decisionByChannel"
@@ -273,7 +266,6 @@ export const useWarRoom = create<WarRoomState>((set, get) => ({
   channels: [],
   channelsLoaded: false,
   messagesByChannel: {},
-  loadingMessages: {},
   liveChannels: {},
   briefByChannel: {},
   decisionByChannel: {},
@@ -289,32 +281,24 @@ export const useWarRoom = create<WarRoomState>((set, get) => ({
   },
 
   async loadMessages(channelId) {
-    // Live (WS-created) channels are fed by the event stream — never overwrite their
-    // streamed messages with an empty REST result.
+    // Live (WS-created) channels are fed by the event stream; don't overwrite
+    // their streamed messages with an empty REST result.
     if (get().liveChannels[channelId]) {
       get().markChannelRead(channelId);
       return;
     }
-    set((s) => ({ loadingMessages: { ...s.loadingMessages, [channelId]: true } }));
-    try {
-      const messages = await api.getMessages(channelId);
-      set((s) => ({
-        messagesByChannel: { ...s.messagesByChannel, [channelId]: messages },
-      }));
-      get().markChannelRead(channelId);
-    } finally {
-      set((s) => ({
-        loadingMessages: { ...s.loadingMessages, [channelId]: false },
-      }));
-    }
+    const messages = await api.getMessages(channelId);
+    set((s) => ({
+      messagesByChannel: { ...s.messagesByChannel, [channelId]: messages },
+    }));
+    get().markChannelRead(channelId);
   },
 
   async sendMessage(channelId, text) {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    // If the crew is paused for a human decision on this channel, a plain-language reply IS the
-    // decision — you can just tell the crew "ship it" instead of clicking the card.
+    // A plain reply while a decision is pending is treated as the decision.
     const pending = get().decisionByChannel[channelId];
     if (pending && pending.incident_id) {
       const t = trimmed.toLowerCase();
@@ -401,10 +385,6 @@ export const useWarRoom = create<WarRoomState>((set, get) => ({
       for (const ev of evs) slice = reduceEvent(slice, ev);
       return slice;
     });
-  },
-
-  applyEvent(ev) {
-    get().applyEvents([ev]);
   },
 
   async respondToDecision(incidentId, channelId, choice, label) {

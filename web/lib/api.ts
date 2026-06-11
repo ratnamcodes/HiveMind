@@ -1,7 +1,5 @@
-// Typed REST client for the war-room. Today it hits the local mock backend
-// (Next route handlers under /api). To point at the real HiveMind backend,
-// set NEXT_PUBLIC_API_BASE — e.g. http://localhost:8000 — and the same calls
-// flow through. Streaming arrives in T17; this layer stays request/response.
+// Typed REST client for the war-room. Hits the local mock backend (Next route
+// handlers under /api); set NEXT_PUBLIC_API_BASE to point at the real backend.
 
 import type { Channel, Message, Thread } from "@/lib/types";
 

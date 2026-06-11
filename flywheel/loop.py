@@ -1,18 +1,16 @@
-"""Data flywheel (T18-C) — the meta-loop that lets the Reviewer rewrite its own rubric.
+"""Data flywheel: the Reviewer rewrites its own critic rubric.
 
-Daily: collect `human_corrected` traces (the T17 👍/👎 writes a Phoenix span annotation),
-turn them into preference pairs, and append them to a dated Phoenix dataset
-(`hivemind-corrections-YYYY-MM-DD`).
+Daily: collect `human_corrected` traces (the war-room feedback buttons write a
+Phoenix span annotation), turn them into preference pairs, and append them to a
+dated Phoenix dataset (`hivemind-corrections-YYYY-MM-DD`).
 
-Weekly: the Reviewer reads recent corrections, pattern-matches recurring critic-misses,
-drafts an improved critic rubric, and upserts it to Phoenix as a new
-`hivemind-critic-rubric` version. It then runs an EXPERIMENT comparing the new rubric vs
-the current production one on the corrections (which rubric catches more human-flagged
-misses). If the new one wins, it moves the `production` tag to it — so every Reviewer
-picks it up on its next get-prompt (T13 wired Reviewer to pull the production tag at
-runtime). The whole run is logged to MongoDB `flywheel_runs`.
+Weekly: the Reviewer reads recent corrections, drafts an improved critic rubric,
+and upserts it to Phoenix as a new `hivemind-critic-rubric` version. An experiment
+compares new vs production on the corrections (which rubric catches more
+human-flagged misses); a winning new rubric gets the `production` tag, which the
+Reviewer pulls at runtime. Each run is logged to MongoDB `flywheel_runs`.
 
-"Arize" here == the self-hosted Phoenix from T13 (phoenix-client / phoenix-mcp).
+"Arize" here means the self-hosted Phoenix (phoenix-client / phoenix-mcp).
 """
 from __future__ import annotations
 
@@ -34,15 +32,12 @@ GEMINI_KEY = os.environ.get("GOOGLE_API_KEY", "")
 PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
 LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 
-# A "correction" = a critic MISS a human flagged: an agent output the Reviewer wrongly
+# A "correction" is a critic miss a human flagged: an agent output the Reviewer wrongly
 # approved. Shape: {agent, rejected_output, human_reason, preferred_output}
 
 
-# --- LLM helpers -----------------------------------------------------------
 def _gemini(prompt: str, json_mode: bool = False) -> str:
-    """One-shot Gemini call via VERTEX AI — the Google Cloud billing the project already
-    pays for — NOT the Developer-API prepaid-credits pool (which is depleted). A fresh
-    client per call avoids the SDK's 'client has been closed'; retries on transient 429s."""
+    """One-shot Gemini call via Vertex AI; fresh client per call; retries transient 429s."""
     from google import genai
 
     config = {"response_mime_type": "application/json"} if json_mode else None
@@ -82,8 +77,8 @@ def _draft_new_rubric(current_rubric: str, corrections: list[dict]) -> str:
 
 
 def _count_caught(rubric: str, corrections: list[dict]) -> int:
-    """ONE call: how many of these known-bad outputs would this rubric REJECT (= caught
-    the critic-miss)? Batched so the experiment is 2 calls total (old vs new), not 2*N."""
+    """How many of these known-bad outputs would this rubric reject? Batched into a
+    single call so the experiment is 2 calls total (old vs new), not 2*N."""
     items = "\n".join(
         f"{i}. [{c['agent']}] {c['rejected_output']}" for i, c in enumerate(corrections)
     )
@@ -100,7 +95,6 @@ def _count_caught(rubric: str, corrections: list[dict]) -> int:
         return 0
 
 
-# --- Phoenix (prompt mgmt + datasets) --------------------------------------
 def _phoenix():
     from phoenix.client import Client
 
@@ -110,7 +104,7 @@ def _phoenix():
 def current_production_rubric() -> tuple[str | None, str]:
     """Return (version_id, system_text) of the production-tagged critic rubric."""
     pv = _phoenix().prompts.get(prompt_identifier=PROMPT_NAME, tag=PRODUCTION_TAG)
-    messages = pv._template["messages"]  # noqa: SLF001 — avoids the legacy .format() path
+    messages = pv._template["messages"]  # noqa: SLF001 (avoids the legacy .format() path)
     text = "\n\n".join(
         m["content"] for m in messages if m.get("role") == "system" and m.get("content")
     )
@@ -159,13 +153,10 @@ def append_to_dataset(corrections: list[dict]) -> str | None:
 
 
 def collect_corrections(hours: int = 24) -> list[dict]:
-    """Production path: read `human_corrected` span annotations from Phoenix (written by
-    the T17 👍/👎 buttons) and build preference pairs. Best-effort hook — returns [] if
-    none/unavailable; the demo seeds corrections directly."""
+    """Not implemented; callers pass corrections explicitly."""
     return []
 
 
-# --- MongoDB log -----------------------------------------------------------
 async def log_run(event: dict) -> bool:
     try:
         from hivemind.mongo_client import close_mongo, get_db
@@ -177,7 +168,6 @@ async def log_run(event: dict) -> bool:
         return False
 
 
-# --- the loop --------------------------------------------------------------
 async def run_loop(corrections: list[dict] | None = None) -> dict:
     """Run one full flywheel cycle. Returns a structured result (also logged to Mongo)."""
     ts = datetime.now(timezone.utc).isoformat()
@@ -209,7 +199,7 @@ async def run_loop(corrections: list[dict] | None = None) -> dict:
     new_id = upsert_rubric(new_rubric)
     result["new_rubric_version"] = new_id
 
-    # EXPERIMENT: which rubric catches more of the human-flagged critic-misses?
+    # Which rubric catches more of the human-flagged critic misses?
     old_caught = _count_caught(old_rubric, corrections)
     new_caught = _count_caught(new_rubric, corrections)
     n = len(corrections)

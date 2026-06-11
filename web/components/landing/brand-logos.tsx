@@ -1,8 +1,7 @@
 import type { SVGProps } from "react";
 
-// Real, official partner marks (paths from simple-icons). Each renders with `fill="currentColor"`
+// Official partner marks (paths from simple-icons). Each renders with `fill="currentColor"`
 // so callers control the color: brand color in the crew grid, muted gray in the trust strip.
-// Brand hexes are exported so we can paint the real colors where it matters.
 
 type LogoProps = SVGProps<SVGSVGElement>;
 
@@ -58,7 +57,7 @@ export function GoogleCloudLogo(props: LogoProps) {
   );
 }
 
-// Gemini ships a gradient spark — keep its real look with its own gradient fill.
+// Gemini's mark uses its own gradient fill rather than currentColor.
 export function GeminiLogo({ className, ...props }: LogoProps) {
   return (
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden className={className} {...props}>

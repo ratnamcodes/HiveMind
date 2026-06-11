@@ -106,8 +106,7 @@ function ConnectCard({
 export default function Onboarding() {
   const [dt, setDt] = useState(false);
   const [gl, setGl] = useState(false);
-  // Connect at least one to continue — the war room works on either, and you can add the other
-  // any time. (Hard-gating on both blocks the demo whenever one tenant/token is unavailable.)
+  // One connection is enough to proceed.
   const ready = dt || gl;
 
   return (

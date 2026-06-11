@@ -1,16 +1,5 @@
-"""Token budget manager (T15-B).
-
-The spec summarizes old turns in `state.messages` when context nears the model's window.
-But HiveMind's orchestrator state is structured per-incident (`finding`, `log_report`, …) —
-there's no growing message list there, so a literal port has nothing to summarize. The
-place a token budget *actually* applies is the CHANNEL CONVERSATION: the Redis `HotMemory`
-sliding window of turns. This is that manager, reframed onto it.
-
-When a channel's turns exceed `threshold_pct` of the model window, `compact()` folds
-everything older than the last `keep_recent` turns into ONE `previous_context` turn (via a
-cheap `thinking_level="minimal"` Gemini call) and logs the compaction to Phoenix as a span.
-Wire it wherever channel history feeds a model (e.g. before passing `HotMemory.recent(...)`
-into a prompt).
+"""Token budget for channel history: when turns exceed `threshold_pct` of the model
+window, `compact()` folds the older ones into a single summarized `previous_context` turn.
 """
 
 from __future__ import annotations
@@ -33,7 +22,7 @@ class TokenBudget:
 
     @staticmethod
     def estimate_tokens(text: str) -> int:
-        """~4 chars/token — fast and network-free; precise enough for a budget threshold."""
+        """~4 chars/token: fast, network-free, precise enough for a budget threshold."""
         return (len(text) + 3) // 4
 
     def tokens(self, turns: list[Turn]) -> int:

@@ -1,23 +1,19 @@
-"""CustomerLiaison — HiveMind's voice of the customer (Fivetran + BigQuery).
+"""CustomerLiaison: HiveMind's voice of the customer (Fivetran + BigQuery).
 
 Two capabilities, because Fivetran moves data but cannot query it:
 
-  1. READ  — `query_customer_data` runs read-only BigQuery SQL over the `customer_usage`
+  1. READ: `query_customer_data` runs read-only BigQuery SQL over the `customer_usage`
      table Fivetran syncs from a Google Sheet, to compute an incident's business blast
      radius (customers affected, revenue at risk, segments).
 
-  2. WRITE — the full Fivetran write surface (official fivetran/fivetran-mcp via uvx), used
+  2. WRITE: the full Fivetran write surface (official fivetran/fivetran-mcp via uvx), used
      as 3 tiered "depth plays" the agent picks per incident:
        A) provision a pipeline on demand   → create_connection (+ setup tests + sync)
        B) refresh a transformation          → run_transformation
        C) GDPR column-level PII redaction   → modify_connection_column_config
 
-Reality notes baked in (verified empirically, NOT from the course doc, which was wrong):
-  - launch is `uvx --from git+...fivetran-mcp` (NOT `uvx fivetran-mcp@latest`)
-  - real tool names are list_connections / get_connection_state (NOT list_connectors /
-    get_connection_sync_status); FIVETRAN_AUTO_APPROVE is a fake env var so it's omitted.
-  - instruction avoids {curly} tokens (ADK reads them as session vars); values injected
-    via __PLACEHOLDER__ replacement.
+The instruction avoids {curly} tokens (ADK reads them as session vars); values are
+injected via __PLACEHOLDER__ replacement.
 """
 
 from __future__ import annotations
@@ -108,9 +104,9 @@ def query_customer_data(sql: str) -> dict:
     return {"row_count": len(rows), "rows": rows}
 
 
-# Official Fivetran MCP via uvx (git+ form — the doc's `fivetran-mcp@latest` does not exist).
-# FIVETRAN_ALLOW_WRITES=true is required or the write tools stay hidden. No FIVETRAN_AUTO_APPROVE
-# (that env var is fake). ADK supplies PATH; we pass only the FIVETRAN_* vars.
+# Official Fivetran MCP via uvx (git+ form; `fivetran-mcp@latest` is not published).
+# FIVETRAN_ALLOW_WRITES=true is required or the write tools stay hidden. ADK supplies
+# PATH; only the FIVETRAN_* vars are passed.
 fivetran_tools = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
@@ -124,7 +120,7 @@ fivetran_tools = McpToolset(
         ),
         timeout=120.0,  # uvx builds from git on first run
     ),
-    # The full write surface (real names, verified by introspection) + the reads each needs.
+    # The write surface plus the reads each depth play needs.
     tool_filter=[
         "get_account_info",
         "list_connections",  # A/C: discover existing sources

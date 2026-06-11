@@ -1,9 +1,8 @@
 "use client";
 
 // Singleton WebSocket to the backend's /ws, with exponential reconnect. Incoming
-// events are BUFFERED and flushed to the store once per animation frame, so a burst
-// of tokens/status collapses into a single re-render (keeps the UI + navigation
-// responsive under load). One connection per tab.
+// events are buffered and flushed to the store in batches, so a burst of
+// tokens/status collapses into a single re-render. One connection per tab.
 
 import { useEffect } from "react";
 import { useWarRoom } from "@/lib/store";
@@ -19,9 +18,8 @@ let flushScheduled = false;
 function scheduleFlush(applyEvents: (evs: WarRoomEvent[]) => void): void {
   if (flushScheduled) return;
   flushScheduled = true;
-  // setTimeout (not requestAnimationFrame): a ~50ms window still collapses a burst into one
-  // render, but it keeps firing when the tab is backgrounded — rAF pauses there, which would
-  // freeze the war room until you switched back to it.
+  // setTimeout (not requestAnimationFrame): a ~50ms window still collapses a burst
+  // into one render, but keeps firing when the tab is backgrounded (rAF pauses there).
   setTimeout(() => {
     flushScheduled = false;
     const batch = buffer.splice(0, buffer.length);
@@ -79,6 +77,6 @@ export function useEventStream(): void {
     if (started) return;
     started = true;
     connect(applyEvents);
-    // Intentionally not closed on unmount — one connection lives for the tab session.
+    // Intentionally not closed on unmount; one connection lives for the tab session.
   }, [applyEvents]);
 }

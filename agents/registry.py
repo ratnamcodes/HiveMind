@@ -1,4 +1,4 @@
-"""The HiveMind agent roster — look up any specialist by id."""
+"""The HiveMind agent roster: look up any specialist by id."""
 
 from __future__ import annotations
 
