@@ -1,0 +1,87 @@
+{
+  "id": "05-gate",
+  "text": "An independent Reviewer audits everything. And pushes back. But nothing ships without you. One click. Approved.",
+  "durationMs": 8034,
+  "words": [
+    {
+      "text": "An",
+      "startMs": 0,
+      "endMs": 174
+    },
+    {
+      "text": "independent",
+      "startMs": 232,
+      "endMs": 755
+    },
+    {
+      "text": "Reviewer",
+      "startMs": 801,
+      "endMs": 1196
+    },
+    {
+      "text": "audits",
+      "startMs": 1277,
+      "endMs": 1614
+    },
+    {
+      "text": "everything.",
+      "startMs": 1707,
+      "endMs": 2310
+    },
+    {
+      "text": "And",
+      "startMs": 2647,
+      "endMs": 2798
+    },
+    {
+      "text": "pushes",
+      "startMs": 2868,
+      "endMs": 3216
+    },
+    {
+      "text": "back.",
+      "startMs": 3286,
+      "endMs": 3785
+    },
+    {
+      "text": "But",
+      "startMs": 4122,
+      "endMs": 4296
+    },
+    {
+      "text": "nothing",
+      "startMs": 4377,
+      "endMs": 4714
+    },
+    {
+      "text": "ships",
+      "startMs": 4783,
+      "endMs": 5062
+    },
+    {
+      "text": "without",
+      "startMs": 5108,
+      "endMs": 5445
+    },
+    {
+      "text": "you.",
+      "startMs": 5492,
+      "endMs": 5817
+    },
+    {
+      "text": "One",
+      "startMs": 6037,
+      "endMs": 6316
+    },
+    {
+      "text": "click.",
+      "startMs": 6362,
+      "endMs": 6815
+    },
+    {
+      "text": "Approved.",
+      "startMs": 6954,
+      "endMs": 8034
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "id": "08-general",
+  "text": "And checkout was just the demo. Same agent for fraud at a bank, surges at the World Cup, a thousand stores at once. Any system. Any incident. Anywhere.",
+  "durationMs": 9567,
+  "words": [
+    {
+      "text": "And",
+      "startMs": 0,
+      "endMs": 221
+    },
+    {
+      "text": "checkout",
+      "startMs": 279,
+      "endMs": 720
+    },
+    {
+      "text": "was",
+      "startMs": 778,
+      "endMs": 894
+    },
+    {
+      "text": "just",
+      "startMs": 964,
+      "endMs": 1196
+    },
+    {
+      "text": "the",
+      "startMs": 1254,
+      "endMs": 1335
+    },
+    {
+      "text": "demo.",
+      "startMs": 1393,
+      "endMs": 1927
+    },
+    {
+      "text": "Same",
+      "startMs": 2159,
+      "endMs": 2450
+    },
+    {
+      "text": "agent",
+      "startMs": 2485,
+      "endMs": 2786
+    },
+    {
+      "text": "for",
+      "startMs": 2821,
+      "endMs": 2937
+    },
+    {
+      "text": "fraud",
+      "startMs": 2984,
+      "endMs": 3251
+    },
+    {
+      "text": "at",
+      "startMs": 3297,
+      "endMs": 3355
+    },
+    {
+      "text": "a",
+      "startMs": 3402,
+      "endMs": 3425
+    },
+    {
+      "text": "bank,",
+      "startMs": 3483,
+      "endMs": 3901
+    },
+    {
+      "text": "surges",
+      "startMs": 4017,
+      "endMs": 4377
+    },
+    {
+      "text": "at",
+      "startMs": 4423,
+      "endMs": 4481
+    },
+    {
+      "text": "the",
+      "startMs": 4516,
+      "endMs": 4586
+    },
+    {
+      "text": "World",
+      "startMs": 4621,
+      "endMs": 4830
+    },
+    {
+      "text": "Cup,",
+      "startMs": 4888,
+      "endMs": 5271
+    },
+    {
+      "text": "a",
+      "startMs": 5387,
+      "endMs": 5457
+    },
+    {
+      "text": "thousand",
+      "startMs": 5550,
+      "endMs": 5979
+    },
+    {
+      "text": "stores",
+      "startMs": 6037,
+      "endMs": 6432
+    },
+    {
+      "text": "at",
+      "startMs": 6478,
+      "endMs": 6548
+    },
+    {
+      "text": "once.",
+      "startMs": 6618,
+      "endMs": 7001
+    },
+    {
+      "text": "Any",
+      "startMs": 7163,
+      "endMs": 7442
+    },
+    {
+      "text": "system.",
+      "startMs": 7523,
+      "endMs": 8034
+    },
+    {
+      "text": "Any",
+      "startMs": 8069,
+      "endMs": 8301
+    },
+    {
+      "text": "incident.",
+      "startMs": 8382,
+      "endMs": 8951
+    },
+    {
+      "text": "Anywhere.",
+      "startMs": 8975,
+      "endMs": 9567
+    }
+  ]
+}

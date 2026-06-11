@@ -1,0 +1,47 @@
+{
+  "id": "09-cta",
+  "text": "This is HiveMind. Incidents, fixed end to end.",
+  "durationMs": 4830,
+  "words": [
+    {
+      "text": "This",
+      "startMs": 0,
+      "endMs": 337
+    },
+    {
+      "text": "is",
+      "startMs": 430,
+      "endMs": 627
+    },
+    {
+      "text": "HiveMind.",
+      "startMs": 708,
+      "endMs": 1625
+    },
+    {
+      "text": "Incidents,",
+      "startMs": 1892,
+      "endMs": 2717
+    },
+    {
+      "text": "fixed",
+      "startMs": 2879,
+      "endMs": 3251
+    },
+    {
+      "text": "end",
+      "startMs": 3344,
+      "endMs": 3692
+    },
+    {
+      "text": "to",
+      "startMs": 3889,
+      "endMs": 4075
+    },
+    {
+      "text": "end.",
+      "startMs": 4191,
+      "endMs": 4830
+    }
+  ]
+}

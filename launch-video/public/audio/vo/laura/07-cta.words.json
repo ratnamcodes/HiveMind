@@ -1,0 +1,37 @@
+{
+  "id": "07-cta",
+  "text": "HiveMind. Incidents, fixed end to end.",
+  "durationMs": 2786,
+  "words": [
+    {
+      "text": "HiveMind.",
+      "startMs": 0,
+      "endMs": 685
+    },
+    {
+      "text": "Incidents,",
+      "startMs": 836,
+      "endMs": 1428
+    },
+    {
+      "text": "fixed",
+      "startMs": 1463,
+      "endMs": 1800
+    },
+    {
+      "text": "end",
+      "startMs": 1881,
+      "endMs": 2009
+    },
+    {
+      "text": "to",
+      "startMs": 2055,
+      "endMs": 2136
+    },
+    {
+      "text": "end.",
+      "startMs": 2218,
+      "endMs": 2786
+    }
+  ]
+}

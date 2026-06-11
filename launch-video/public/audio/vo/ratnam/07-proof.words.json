@@ -1,0 +1,87 @@
+{
+  "id": "07-proof",
+  "text": "Then it proves it worked. 1.2 seconds, down to three milliseconds — confirmed on live telemetry.",
+  "durationMs": 6362,
+  "words": [
+    {
+      "text": "Then",
+      "startMs": 0,
+      "endMs": 209
+    },
+    {
+      "text": "it",
+      "startMs": 255,
+      "endMs": 313
+    },
+    {
+      "text": "proves",
+      "startMs": 348,
+      "endMs": 604
+    },
+    {
+      "text": "it",
+      "startMs": 650,
+      "endMs": 720
+    },
+    {
+      "text": "worked.",
+      "startMs": 766,
+      "endMs": 1173
+    },
+    {
+      "text": "1.2",
+      "startMs": 1591,
+      "endMs": 2159
+    },
+    {
+      "text": "seconds,",
+      "startMs": 2229,
+      "endMs": 2717
+    },
+    {
+      "text": "down",
+      "startMs": 2775,
+      "endMs": 2995
+    },
+    {
+      "text": "to",
+      "startMs": 3042,
+      "endMs": 3100
+    },
+    {
+      "text": "three",
+      "startMs": 3158,
+      "endMs": 3355
+    },
+    {
+      "text": "milliseconds",
+      "startMs": 3390,
+      "endMs": 4040
+    },
+    {
+      "text": "—",
+      "startMs": 4180,
+      "endMs": 4284
+    },
+    {
+      "text": "confirmed",
+      "startMs": 4516,
+      "endMs": 5016
+    },
+    {
+      "text": "on",
+      "startMs": 5050,
+      "endMs": 5120
+    },
+    {
+      "text": "live",
+      "startMs": 5190,
+      "endMs": 5410
+    },
+    {
+      "text": "telemetry.",
+      "startMs": 5433,
+      "endMs": 6362
+    }
+  ]
+}

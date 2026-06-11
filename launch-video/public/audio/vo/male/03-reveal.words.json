@@ -1,0 +1,57 @@
+{
+  "id": "03-reveal",
+  "text": "So I gave the whole incident to six AI agents.",
+  "durationMs": 3437,
+  "words": [
+    {
+      "text": "So",
+      "startMs": 0,
+      "endMs": 279
+    },
+    {
+      "text": "I",
+      "startMs": 441,
+      "endMs": 511
+    },
+    {
+      "text": "gave",
+      "startMs": 627,
+      "endMs": 824
+    },
+    {
+      "text": "the",
+      "startMs": 859,
+      "endMs": 929
+    },
+    {
+      "text": "whole",
+      "startMs": 964,
+      "endMs": 1138
+    },
+    {
+      "text": "incident",
+      "startMs": 1173,
+      "endMs": 1544
+    },
+    {
+      "text": "to",
+      "startMs": 1579,
+      "endMs": 1741
+    },
+    {
+      "text": "six",
+      "startMs": 1834,
+      "endMs": 2159
+    },
+    {
+      "text": "AI",
+      "startMs": 2276,
+      "endMs": 2635
+    },
+    {
+      "text": "agents.",
+      "startMs": 2682,
+      "endMs": 3437
+    }
+  ]
+}

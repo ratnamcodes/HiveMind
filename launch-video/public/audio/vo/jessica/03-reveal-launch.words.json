@@ -1,0 +1,42 @@
+{
+  "id": "03-reveal-launch",
+  "text": "So six AI agents took the call.",
+  "durationMs": 3204,
+  "words": [
+    {
+      "text": "So",
+      "startMs": 0,
+      "endMs": 290
+    },
+    {
+      "text": "six",
+      "startMs": 557,
+      "endMs": 801
+    },
+    {
+      "text": "AI",
+      "startMs": 871,
+      "endMs": 1138
+    },
+    {
+      "text": "agents",
+      "startMs": 1207,
+      "endMs": 1579
+    },
+    {
+      "text": "took",
+      "startMs": 1614,
+      "endMs": 1776
+    },
+    {
+      "text": "the",
+      "startMs": 1823,
+      "endMs": 1892
+    },
+    {
+      "text": "call.",
+      "startMs": 1927,
+      "endMs": 3204
+    }
+  ]
+}

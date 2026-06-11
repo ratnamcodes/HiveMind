@@ -1,0 +1,147 @@
+{
+  "id": "05-swarm",
+  "text": "Then the swarm moves at once. Liaison does the math — seven customers, eighteen grand a month. And CodeArch writes the fix, and opens a real merge request.",
+  "durationMs": 11099,
+  "words": [
+    {
+      "text": "Then",
+      "startMs": 0,
+      "endMs": 313
+    },
+    {
+      "text": "the",
+      "startMs": 372,
+      "endMs": 441
+    },
+    {
+      "text": "swarm",
+      "startMs": 488,
+      "endMs": 789
+    },
+    {
+      "text": "moves",
+      "startMs": 836,
+      "endMs": 1126
+    },
+    {
+      "text": "at",
+      "startMs": 1184,
+      "endMs": 1347
+    },
+    {
+      "text": "once.",
+      "startMs": 1463,
+      "endMs": 1927
+    },
+    {
+      "text": "Liaison",
+      "startMs": 2287,
+      "endMs": 2717
+    },
+    {
+      "text": "does",
+      "startMs": 2775,
+      "endMs": 2949
+    },
+    {
+      "text": "the",
+      "startMs": 3007,
+      "endMs": 3077
+    },
+    {
+      "text": "math",
+      "startMs": 3123,
+      "endMs": 3413
+    },
+    {
+      "text": "—",
+      "startMs": 3553,
+      "endMs": 3611
+    },
+    {
+      "text": "seven",
+      "startMs": 3773,
+      "endMs": 4063
+    },
+    {
+      "text": "customers,",
+      "startMs": 4122,
+      "endMs": 4656
+    },
+    {
+      "text": "eighteen",
+      "startMs": 4737,
+      "endMs": 5178
+    },
+    {
+      "text": "grand",
+      "startMs": 5236,
+      "endMs": 5538
+    },
+    {
+      "text": "a",
+      "startMs": 5619,
+      "endMs": 5654
+    },
+    {
+      "text": "month.",
+      "startMs": 5770,
+      "endMs": 6211
+    },
+    {
+      "text": "And",
+      "startMs": 6525,
+      "endMs": 6780
+    },
+    {
+      "text": "CodeArch",
+      "startMs": 6861,
+      "endMs": 7303
+    },
+    {
+      "text": "writes",
+      "startMs": 7372,
+      "endMs": 7709
+    },
+    {
+      "text": "the",
+      "startMs": 7779,
+      "endMs": 7883
+    },
+    {
+      "text": "fix,",
+      "startMs": 7964,
+      "endMs": 8440
+    },
+    {
+      "text": "and",
+      "startMs": 8638,
+      "endMs": 8835
+    },
+    {
+      "text": "opens",
+      "startMs": 8928,
+      "endMs": 9288
+    },
+    {
+      "text": "a",
+      "startMs": 9334,
+      "endMs": 9369
+    },
+    {
+      "text": "real",
+      "startMs": 9485,
+      "endMs": 9729
+    },
+    {
+      "text": "merge",
+      "startMs": 9822,
+      "endMs": 10170
+    },
+    {
+      "text": "request.",
+      "startMs": 10240,
+      "endMs": 11099
+    }
+  ]
+}

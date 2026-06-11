@@ -1,0 +1,87 @@
+{
+  "id": "07-proof",
+  "text": "Then it proves it. 1.2 seconds, down to three — on live telemetry. No screenshots. Receipts.",
+  "durationMs": 6362,
+  "words": [
+    {
+      "text": "Then",
+      "startMs": 0,
+      "endMs": 197
+    },
+    {
+      "text": "it",
+      "startMs": 244,
+      "endMs": 302
+    },
+    {
+      "text": "proves",
+      "startMs": 337,
+      "endMs": 615
+    },
+    {
+      "text": "it.",
+      "startMs": 685,
+      "endMs": 940
+    },
+    {
+      "text": "1.2",
+      "startMs": 1300,
+      "endMs": 1892
+    },
+    {
+      "text": "seconds,",
+      "startMs": 1974,
+      "endMs": 2403
+    },
+    {
+      "text": "down",
+      "startMs": 2438,
+      "endMs": 2659
+    },
+    {
+      "text": "to",
+      "startMs": 2694,
+      "endMs": 2752
+    },
+    {
+      "text": "three",
+      "startMs": 2810,
+      "endMs": 3158
+    },
+    {
+      "text": "—",
+      "startMs": 3181,
+      "endMs": 3228
+    },
+    {
+      "text": "on",
+      "startMs": 3262,
+      "endMs": 3425
+    },
+    {
+      "text": "live",
+      "startMs": 3483,
+      "endMs": 3704
+    },
+    {
+      "text": "telemetry.",
+      "startMs": 3727,
+      "endMs": 4412
+    },
+    {
+      "text": "No",
+      "startMs": 4679,
+      "endMs": 4830
+    },
+    {
+      "text": "screenshots.",
+      "startMs": 4899,
+      "endMs": 5550
+    },
+    {
+      "text": "Receipts.",
+      "startMs": 5619,
+      "endMs": 6362
+    }
+  ]
+}
